@@ -7,6 +7,7 @@ const router = express.Router();
 
 const ORDER_STATUS_PENDING = "Pending";
 const ORDER_STATUS_CANCELLED = "Cancelled";
+const MENU_DATABASE = "smartbite";
 
 const CART_TYPES = {
   MEALS_DRINKS: "meals_drinks",
@@ -65,8 +66,10 @@ function priceToCents(value) {
 
   if (!match) return null;
 
-  return Number(match[1]) * 100 +
-    Number((match[2] || "").padEnd(2, "0"));
+  return (
+    Number(match[1]) * 100 +
+    Number((match[2] || "").padEnd(2, "0"))
+  );
 }
 
 function formatCents(cents) {
@@ -147,6 +150,7 @@ function getMenuConfig() {
   return { table, idColumn, priceColumn };
 }
 
+// Menu data lives in smartbite; order data stays in canteen_db.
 function menuLookupSql(config, count) {
   const placeholders = Array(count).fill("?").join(", ");
 
@@ -155,14 +159,15 @@ function menuLookupSql(config, count) {
       m.\`${config.idColumn}\` AS item_id,
       m.\`${config.priceColumn}\` AS unit_price,
       c.category_name AS category
-    FROM \`${config.table}\` m
-    JOIN Categories c
+    FROM \`${MENU_DATABASE}\`.\`${config.table}\` m
+    JOIN \`${MENU_DATABASE}\`.Categories c
       ON c.category_id = m.category_id
     WHERE m.\`${config.idColumn}\` IN (${placeholders})
       AND m.available = TRUE
   `;
 }
 
+// Order_Items stays in canteen_db; menu names come from smartbite.
 function orderItemsSql(config) {
   return `
     SELECT
@@ -173,7 +178,7 @@ function orderItemsSql(config) {
       oi.unit_price,
       oi.subtotal
     FROM Order_Items oi
-    LEFT JOIN \`${config.table}\` m
+    LEFT JOIN \`${MENU_DATABASE}\`.\`${config.table}\` m
       ON m.\`${config.idColumn}\` = oi.item_id
     WHERE oi.order_id = ?
     ORDER BY oi.order_item_id

@@ -1,7 +1,7 @@
 
 import { useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
-import { ShoppingBag, Menu, X, Search } from 'lucide-react'
+import { ShoppingBag, Menu, X } from 'lucide-react'
 
 function Navbar() {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -49,6 +49,10 @@ function Navbar() {
 
                     <NavLink to="/cart" className={navLinkClass}>
                         Cart
+                    </NavLink>
+
+                    <NavLink to="/my-orders" className={navLinkClass}>
+                        My Orders
                     </NavLink>
 
                     <NavLink to="/login" className={navLinkClass}>
@@ -102,6 +106,10 @@ function Navbar() {
 
                         <NavLink to="/cart" onClick={closeMobileMenu} className={mobileLinkClass}>
                             Cart
+                        </NavLink>
+
+                        <NavLink to="/my-orders" onClick={closeMobileMenu} className={mobileLinkClass}>
+                            My Orders
                         </NavLink>
 
                         <NavLink to="/login" onClick={closeMobileMenu} className={mobileLinkClass}>
