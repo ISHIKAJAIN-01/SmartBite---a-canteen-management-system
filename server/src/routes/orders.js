@@ -46,14 +46,18 @@ function toPositiveInt(value) {
 }
 
 function isPlainObject(value) {
-  return value !== null &&
+  return (
+    value !== null &&
     typeof value === "object" &&
-    !Array.isArray(value);
+    !Array.isArray(value)
+  );
 }
 
 function isSafeIdentifier(name) {
-  return typeof name === "string" &&
-    /^[A-Za-z_][A-Za-z0-9_]*$/.test(name);
+  return (
+    typeof name === "string" &&
+    /^[A-Za-z_][A-Za-z0-9_]*$/.test(name)
+  );
 }
 
 function priceToCents(value) {
@@ -66,15 +70,12 @@ function priceToCents(value) {
 }
 
 function formatCents(cents) {
-  return `${Math.floor(cents / 100)}.${String(cents % 100)
-    .padStart(2, "0")}`;
+  return `${Math.floor(cents / 100)}.${String(cents % 100).padStart(2, "0")}`;
 }
 
 function validateOrderBody(body) {
   if (!isPlainObject(body)) {
-    return {
-      errors: ["Request body must be a JSON object"],
-    };
+    return { errors: ["Request body must be a JSON object"] };
   }
 
   const errors = [];
@@ -96,9 +97,7 @@ function validateOrderBody(body) {
   if (!Array.isArray(body.items) || body.items.length === 0) {
     errors.push("items must be a non-empty array");
   } else if (body.items.length > MAX_ITEM_LINES) {
-    errors.push(
-      `items cannot contain more than ${MAX_ITEM_LINES} entries`
-    );
+    errors.push(`items cannot contain more than ${MAX_ITEM_LINES} entries`);
   } else {
     body.items.forEach((entry, index) => {
       const itemId = isPlainObject(entry)
@@ -110,22 +109,15 @@ function validateOrderBody(body) {
         : null;
 
       if (itemId === null) {
-        errors.push(
-          `items[${index}].item_id must be a positive integer`
-        );
+        errors.push(`items[${index}].item_id must be a positive integer`);
       }
 
       if (quantity === null) {
-        errors.push(
-          `items[${index}].quantity must be a positive integer`
-        );
+        errors.push(`items[${index}].quantity must be a positive integer`);
       }
 
       if (itemId !== null && quantity !== null) {
-        lines.set(
-          itemId,
-          (lines.get(itemId) || 0) + quantity
-        );
+        lines.set(itemId, (lines.get(itemId) || 0) + quantity);
       }
     });
 
@@ -149,18 +141,10 @@ function getMenuConfig() {
     !isSafeIdentifier(idColumn) ||
     !isSafeIdentifier(priceColumn)
   ) {
-    throw new Error(
-      "Invalid menuSchema.js configuration"
-    );
+    throw new Error("Invalid menuSchema.js configuration");
   }
 
-  // The temporary menu table must contain a category column.
-  return {
-    table,
-    idColumn,
-    priceColumn,
-    categoryColumn: "category",
-  };
+  return { table, idColumn, priceColumn };
 }
 
 function menuLookupSql(config, count) {
@@ -168,11 +152,14 @@ function menuLookupSql(config, count) {
 
   return `
     SELECT
-      \`${config.idColumn}\` AS item_id,
-      \`${config.priceColumn}\` AS unit_price,
-      \`${config.categoryColumn}\` AS category
-    FROM \`${config.table}\`
-    WHERE \`${config.idColumn}\` IN (${placeholders})
+      m.\`${config.idColumn}\` AS item_id,
+      m.\`${config.priceColumn}\` AS unit_price,
+      c.category_name AS category
+    FROM \`${config.table}\` m
+    JOIN Categories c
+      ON c.category_id = m.category_id
+    WHERE m.\`${config.idColumn}\` IN (${placeholders})
+      AND m.available = TRUE
   `;
 }
 
@@ -181,7 +168,7 @@ function orderItemsSql(config) {
     SELECT
       oi.order_item_id,
       oi.item_id,
-      m.name AS item_name,
+      m.item_name AS item_name,
       oi.quantity,
       oi.unit_price,
       oi.subtotal
@@ -211,11 +198,12 @@ function sendError(res, error) {
 }
 
 // GET /api/orders
-// Optional filter: GET /api/orders?user_id=1
+// Optional filter: /api/orders?user_id=1
 router.get("/", async (req, res) => {
-  const userId = req.query.user_id === undefined
-    ? null
-    : toPositiveInt(req.query.user_id);
+  const userId =
+    req.query.user_id === undefined
+      ? null
+      : toPositiveInt(req.query.user_id);
 
   if (req.query.user_id !== undefined && userId === null) {
     return res.status(400).json({
@@ -230,6 +218,7 @@ router.get("/", async (req, res) => {
              total_amount, pickup_code, cart_type
       FROM Orders
     `;
+
     const params = [];
 
     if (userId !== null) {
@@ -332,14 +321,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // POST /api/orders
-// Body:
-// {
-//   "user_id": 1,
-//   "cart_type": "meals_drinks",
-//   "items": [
-//     { "item_id": 1, "quantity": 2 }
-//   ]
-// }
+// Body: { user_id, cart_type, items: [{ item_id, quantity }] }
 router.post("/", async (req, res) => {
   const { errors, userId, cartType, lines } =
     validateOrderBody(req.body);
@@ -381,7 +363,7 @@ router.post("/", async (req, res) => {
     if (missing.length > 0) {
       throw new OrderRequestError(
         400,
-        "Some menu items do not exist",
+        "Some menu items do not exist or are unavailable",
         { missing_item_ids: missing }
       );
     }
@@ -390,10 +372,7 @@ router.post("/", async (req, res) => {
 
     const invalidItems = itemIds
       .map((id) => menuById.get(id))
-      .filter(
-        (item) =>
-          !allowedCategories.includes(item.category)
-      )
+      .filter((item) => !allowedCategories.includes(item.category))
       .map((item) => ({
         item_id: Number(item.item_id),
         category: item.category,
@@ -418,9 +397,7 @@ router.post("/", async (req, res) => {
       const unitCents = priceToCents(item.unit_price);
 
       if (unitCents === null) {
-        throw new Error(
-          `Invalid price for menu item ${itemId}`
-        );
+        throw new Error(`Invalid price for menu item ${itemId}`);
       }
 
       const quantity = lines.get(itemId);
@@ -447,14 +424,9 @@ router.post("/", async (req, res) => {
 
     const [orderResult] = await connection.execute(
       `INSERT INTO Orders
-        (user_id, status, total_amount, cart_type)
+         (user_id, status, total_amount, cart_type)
        VALUES (?, ?, ?, ?)`,
-      [
-        userId,
-        ORDER_STATUS_PENDING,
-        totalAmount,
-        cartType,
-      ]
+      [userId, ORDER_STATUS_PENDING, totalAmount, cartType]
     );
 
     const orderId = orderResult.insertId;
@@ -473,7 +445,7 @@ router.post("/", async (req, res) => {
 
     await connection.execute(
       `INSERT INTO Order_Items
-        (order_id, item_id, quantity, unit_price, subtotal)
+         (order_id, item_id, quantity, unit_price, subtotal)
        VALUES ${placeholders}`,
       params
     );
@@ -507,8 +479,7 @@ router.post("/", async (req, res) => {
     if (error.errno === 1452) {
       return res.status(400).json({
         status: "error",
-        message:
-          "A referenced user or database record does not exist",
+        message: "A referenced user or database record does not exist",
       });
     }
 
@@ -519,7 +490,7 @@ router.post("/", async (req, res) => {
 });
 
 // PATCH /api/orders/:id/cancel
-// Body (optional): { "reason": "Changed my mind" }
+// Body (optional): { reason: "Changed my mind" }
 router.patch("/:id/cancel", async (req, res) => {
   const orderId = toPositiveInt(req.params.id);
 
@@ -531,8 +502,7 @@ router.patch("/:id/cancel", async (req, res) => {
   }
 
   const reason =
-    isPlainObject(req.body) &&
-    typeof req.body.reason === "string"
+    isPlainObject(req.body) && typeof req.body.reason === "string"
       ? req.body.reason.trim().slice(0, 2000)
       : "";
 
@@ -564,10 +534,7 @@ router.patch("/:id/cancel", async (req, res) => {
     }
 
     if (order.status === ORDER_STATUS_CANCELLED) {
-      throw new OrderRequestError(
-        409,
-        "Order is already cancelled"
-      );
+      throw new OrderRequestError(409, "Order is already cancelled");
     }
 
     if (order.status === "Completed") {
@@ -583,11 +550,7 @@ router.patch("/:id/cancel", async (req, res) => {
            cancelled_at = CURRENT_TIMESTAMP,
            cancellation_reason = ?
        WHERE order_id = ?`,
-      [
-        ORDER_STATUS_CANCELLED,
-        reason || null,
-        orderId,
-      ]
+      [ORDER_STATUS_CANCELLED, reason || null, orderId]
     );
 
     await connection.commit();

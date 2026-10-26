@@ -17,8 +17,10 @@
 //   priceColumn : the column holding the current unit price
 //
 // Names are used as SQL identifiers, so only letters, digits and "_" are allowed.
+
 module.exports = {
-  table: "tmp_menu_test",
+  table: "Menu_Items",
   idColumn: "item_id",
   priceColumn: "price",
 };
+
