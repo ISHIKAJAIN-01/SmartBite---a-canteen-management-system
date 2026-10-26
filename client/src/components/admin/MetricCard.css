@@ -1,0 +1,8 @@
+.metric-card { padding:20px; min-width:0; }
+.metric-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.metric-label { color:#817264; font-size:12px; font-weight:500; }
+.metric-icon { width:36px; height:36px; display:grid; place-items:center; border-radius:11px; font-size:17px; }
+.tone-brown { background:#f1e4d3; color:#6c4429; }.tone-green { background:#e3f1e6; color:#37764a; }.tone-amber { background:#fff0d6; color:#986514; }.tone-red { background:#fbe8e4; color:#a34636; }
+.metric-value { font-size:30px; line-height:1.2; letter-spacing:-1px; font-weight:700; margin:16px 0 12px; color:#30231d; }
+.metric-bottom { display:flex; align-items:center; gap:7px; flex-wrap:wrap; font-size:10px; }
+.metric-change { color:#37814a; font-weight:700; }.metric-change.negative { color:#b16b28; }.metric-caption { color:#9a8a7a; }
