@@ -1,0 +1,67 @@
+-- MySQL dump 10.13  Distrib 8.0.46, for macos15 (arm64)
+--
+-- Host: 127.0.0.1    Database: canteen_db
+-- ------------------------------------------------------
+-- Server version	26.7.0
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!50503 SET NAMES utf8 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+SET @MYSQLDUMP_TEMP_LOG_BIN = @@SESSION.SQL_LOG_BIN;
+SET @@SESSION.SQL_LOG_BIN= 0;
+
+--
+-- GTID state at the beginning of the backup 
+--
+
+SET @@GLOBAL.GTID_PURGED=/*!80000 '+'*/ '74451576-a077-11f1-a734-8cc430a5ac6e:1-190';
+
+--
+-- Table structure for table `Order_Items`
+--
+
+DROP TABLE IF EXISTS `Order_Items`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `Order_Items` (
+  `order_item_id` int NOT NULL AUTO_INCREMENT,
+  `order_id` int NOT NULL,
+  `item_id` int NOT NULL,
+  `quantity` int NOT NULL,
+  `unit_price` decimal(10,2) NOT NULL,
+  `subtotal` decimal(10,2) NOT NULL,
+  PRIMARY KEY (`order_item_id`),
+  KEY `order_id` (`order_id`),
+  CONSTRAINT `order_items_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `Orders` (`order_id`),
+  CONSTRAINT `chk_oi_quantity_pos` CHECK ((`quantity` > 0))
+) ENGINE=InnoDB AUTO_INCREMENT=34 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `Order_Items`
+--
+
+LOCK TABLES `Order_Items` WRITE;
+/*!40000 ALTER TABLE `Order_Items` DISABLE KEYS */;
+INSERT INTO `Order_Items` VALUES (1,1,1,2,125.00,250.00),(2,2,1,2,50.00,100.00),(3,2,3,1,10.10,10.10),(4,3,4,1,60.00,60.00),(5,3,6,1,20.00,20.00),(6,4,1,1,50.00,50.00),(7,5,1,5,50.00,250.00),(8,6,1,1,50.00,50.00),(9,7,1,1,50.00,50.00),(10,8,1,1,50.00,50.00),(11,9,9,1,50.00,50.00),(12,10,1,1,50.00,50.00),(13,11,1,2,40.00,80.00),(14,11,2,2,40.00,80.00),(15,11,3,1,40.00,40.00),(16,12,64,1,20.00,20.00),(17,12,65,2,40.00,80.00),(18,12,66,1,20.00,20.00),(19,13,1,2,40.00,80.00),(20,14,2,1,40.00,40.00),(21,15,2,1,40.00,40.00),(22,15,3,1,40.00,40.00),(23,16,64,1,20.00,20.00),(24,17,2,1,40.00,40.00),(25,17,3,1,40.00,40.00),(26,18,2,1,40.00,40.00),(27,18,3,1,40.00,40.00),(28,19,64,1,20.00,20.00),(29,19,65,1,40.00,40.00),(30,20,38,2,50.00,100.00),(31,20,39,1,60.00,60.00),(32,21,38,2,50.00,100.00),(33,21,39,1,60.00,60.00);
+/*!40000 ALTER TABLE `Order_Items` ENABLE KEYS */;
+UNLOCK TABLES;
+SET @@SESSION.SQL_LOG_BIN = @MYSQLDUMP_TEMP_LOG_BIN;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2026-10-26 23:08:24
