@@ -1,0 +1,10 @@
+.table-scroll { width:100%; overflow-x:auto; }
+.data-table { width:100%; border-collapse:collapse; text-align:left; }
+.data-table th { padding:13px 18px; color:#9a8a7a; background:#fcfaf7; font-size:10px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; white-space:nowrap; border-bottom:1px solid #eee5da; }
+.data-table td { padding:14px 18px; color:#55483e; font-size:12px; border-bottom:1px solid #f1ebe4; white-space:nowrap; }
+.data-table tbody tr:last-child td { border-bottom:0; }
+.data-table tbody tr:hover { background:#fdfaf6; }
+.table-empty { text-align:center; color:#9a8a7a !important; padding:36px !important; }
+.table-primary { color:#382117; font-weight:700; }.table-secondary { color:#9a8a7a; font-size:10px; display:block; margin-top:3px; }
+.table-action { border:1px solid var(--color-border); background:#fff; color:#6b5544; padding:6px 10px; border-radius:7px; font-size:11px; font-weight:600; }
+.table-action:hover { background:#f8f1e8; }
