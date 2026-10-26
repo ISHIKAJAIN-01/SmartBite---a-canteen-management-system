@@ -1,0 +1,11 @@
+node_modules/
+client/node_modules/
+server/node_modules/
+.env
+.env.*
+!.env.example
+.DS_Store
+dist/
+client/dist/
+server/dist/
+coverage/

@@ -1,0 +1,132 @@
+.home-container {
+  width: 100%;
+  padding: 40px 0;
+  display: flex;
+  justify-content: center;
+}
+
+.home-wrapper {
+  width: 100%;
+  max-width: var(--content-width);
+  padding: 0 var(--page-padding);
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+}
+
+.home-hero-card {
+  padding: 56px 48px;
+  background-color: var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.hero-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--color-latte);
+  color: var(--color-espresso);
+  padding: 6px 14px;
+  border-radius: var(--radius-badge);
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid var(--color-border);
+}
+
+.hero-title {
+  font-size: 38px;
+  font-weight: 800;
+  color: var(--color-espresso);
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  max-width: 680px;
+}
+
+.hero-description {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--color-taupe);
+  max-width: 640px;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.hero-btn {
+  padding: 12px 24px;
+  font-size: 15px;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.feature-card {
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card);
+}
+
+.feature-icon-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background-color: var(--color-latte);
+  color: var(--color-espresso);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.feature-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-espresso);
+  letter-spacing: -0.01em;
+}
+
+.feature-desc {
+  font-size: 14px;
+  color: var(--color-taupe);
+  line-height: 1.6;
+}
+
+.feature-link {
+  margin-top: auto;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-espresso);
+}
+
+@media (max-width: 992px) {
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-title {
+    font-size: 30px;
+  }
+
+  .home-hero-card {
+    padding: 36px 24px;
+  }
+}

@@ -1,0 +1,58 @@
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: var(--radius-badge);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.badge-medium {
+  padding: 6px 14px;
+  font-size: 13px;
+}
+
+.badge-large {
+  padding: 8px 18px;
+  font-size: 14px;
+}
+
+.badge-small {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.badge-icon {
+  flex-shrink: 0;
+}
+
+/* Placed: oat beige background, espresso text */
+.badge-placed {
+  background-color: var(--color-placed-bg);
+  color: var(--color-placed-text);
+}
+
+/* Preparing */
+.badge-preparing {
+  background-color: var(--color-preparing-bg);
+  color: var(--color-preparing-text);
+}
+
+/* Ready */
+.badge-ready {
+  background-color: var(--color-ready-bg);
+  color: var(--color-ready-text);
+}
+
+/* Collected */
+.badge-collected {
+  background-color: var(--color-collected-bg);
+  color: var(--color-collected-text);
+}
+
+/* Cancelled */
+.badge-cancelled {
+  background-color: var(--color-cancelled-bg);
+  color: var(--color-cancelled-text);
+}

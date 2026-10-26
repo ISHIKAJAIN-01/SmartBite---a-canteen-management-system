@@ -1,0 +1,50 @@
+/**
+ * SmartBite Theme Tokens — Warm Café
+ * Strict specification matching Member 3 guidelines
+ */
+
+:root {
+  /* Warm Café Core Palette */
+  --color-espresso: #382117;
+  --color-ivory: #F8F1E8;
+  --color-oat: #EADCC3;
+  --color-latte: #F2E6D1;
+  --color-cocoa: #30231D;
+  --color-taupe: #968575;
+  --color-border: #E5D9C9;
+  --color-card-bg: #FFFFFF;
+
+  /* Status Colors */
+  --color-ready-bg: #E7EFE4;
+  --color-ready-text: #496B4A;
+  --color-preparing-bg: #F5E9D6;
+  --color-preparing-text: #87551F;
+  --color-cancelled-bg: #F5E5E1;
+  --color-cancelled-text: #A3473F;
+  --color-placed-bg: #EADCC3;
+  --color-placed-text: #382117;
+  --color-collected-bg: #E7EFE4;
+  --color-collected-text: #496B4A;
+
+  /* Typography */
+  --font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* Sizing and Radii */
+  --radius-card: 16px;
+  --radius-button: 10px;
+  --radius-input: 10px;
+  --radius-badge: 9999px;
+
+  /* Layout dimensions */
+  --content-width: 1200px;
+  --tracking-width: 960px;
+  --page-padding: 36px;
+  --page-padding-mobile: 18px;
+
+  /* Subtle elevations */
+  --shadow-subtle: 0 2px 8px rgba(56, 33, 23, 0.04);
+  --shadow-card: 0 4px 16px rgba(56, 33, 23, 0.06);
+
+  /* Transitions */
+  --transition-smooth: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}

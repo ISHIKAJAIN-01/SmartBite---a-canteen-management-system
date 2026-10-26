@@ -1,0 +1,21 @@
+{
+  "name": "smartbite-member3-root",
+  "version": "1.0.0",
+  "description": "SmartBite - Member 3: Order Tracking, Queue Status, Estimated Pickup Time & Pickup Information",
+  "private": true,
+  "scripts": {
+    "server": "cd server && npm start",
+    "server:dev": "cd server && npm run dev",
+    "client": "cd client && npm run dev",
+    "test": "cd server && npm test",
+    "build": "cd client && npm run build"
+  },
+  "keywords": [
+    "smartbite",
+    "order-tracking",
+    "canteen-management",
+    "queue-status"
+  ],
+  "author": "SmartBite Team - Member 3",
+  "license": "ISC"
+}

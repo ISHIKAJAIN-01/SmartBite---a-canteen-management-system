@@ -1,0 +1,163 @@
+.pickup-card {
+  border-radius: var(--radius-card);
+  padding: 24px;
+  border: 1px solid var(--color-border);
+  transition: var(--transition-smooth);
+}
+
+/* Ready State */
+.ready-card {
+  background-color: var(--color-ready-bg);
+  border-color: #cbdcc8;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pickup-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pickup-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #d6e5d2;
+  color: var(--color-ready-text);
+  padding: 4px 12px;
+  border-radius: var(--radius-badge);
+  font-size: 12px;
+  font-weight: 700;
+  width: fit-content;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pickup-main-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-ready-text);
+}
+
+.pickup-subtitle {
+  font-size: 14px;
+  color: var(--color-cocoa);
+}
+
+.pickup-code-box {
+  background-color: #FFFFFF;
+  border: 2px dashed #9cb89c;
+  border-radius: 12px;
+  padding: 16px 20px;
+  text-align: center;
+  margin: 6px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.code-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-taupe);
+}
+
+.code-value {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--color-espresso);
+  font-family: monospace, var(--font-family);
+}
+
+.pickup-instructions-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background-color: rgba(255, 255, 255, 0.7);
+  border-radius: var(--radius-button);
+  font-size: 13.5px;
+  color: var(--color-cocoa);
+}
+
+.instructions-icon {
+  color: var(--color-ready-text);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.instructions-text {
+  line-height: 1.5;
+}
+
+/* Collected State */
+.collected-card {
+  background-color: var(--color-ready-bg);
+  border-color: #cbdcc8;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+}
+
+.collected-icon-wrapper {
+  color: var(--color-ready-text);
+  flex-shrink: 0;
+}
+
+.collected-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-ready-text);
+  margin-bottom: 2px;
+}
+
+.collected-message {
+  font-size: 13.5px;
+  color: var(--color-cocoa);
+}
+
+/* Pending State */
+.pending-card {
+  background-color: var(--color-latte);
+  border-color: var(--color-border);
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px 22px;
+}
+
+.pending-icon-wrapper {
+  color: var(--color-taupe);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.pending-title {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--color-espresso);
+  margin-bottom: 2px;
+}
+
+.pending-message {
+  font-size: 13px;
+  color: var(--color-taupe);
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .pickup-card {
+    padding: 18px;
+  }
+
+  .code-value {
+    font-size: 26px;
+  }
+}

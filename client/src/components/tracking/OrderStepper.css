@@ -1,0 +1,219 @@
+.order-stepper-root {
+  width: 100%;
+  padding: 12px 0 20px 0;
+}
+
+.stepper-track {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  list-style: none;
+  position: relative;
+  width: 100%;
+}
+
+.stepper-item {
+  display: flex;
+  align-items: center;
+  position: relative;
+  flex: 1;
+}
+
+.stepper-item:last-child {
+  flex: 0;
+}
+
+/* Connector Lines */
+.stepper-connector {
+  position: absolute;
+  top: 18px;
+  right: calc(50% + 20px);
+  left: calc(-50% + 20px);
+  height: 2px;
+  z-index: 1;
+  transition: background-color 0.3s ease;
+}
+
+.connector-completed {
+  background-color: var(--color-espresso);
+}
+
+.connector-future {
+  background-color: var(--color-oat);
+}
+
+/* Node and Label */
+.stepper-node-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  z-index: 2;
+  margin: 0 auto;
+  gap: 8px;
+}
+
+.stepper-node {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  transition: var(--transition-smooth);
+}
+
+/* Step Node States */
+.step-completed .stepper-node {
+  background-color: var(--color-espresso);
+  color: var(--color-ivory);
+}
+
+.step-current .stepper-node {
+  background-color: var(--color-espresso);
+  color: var(--color-ivory);
+  box-shadow: 0 0 0 4px var(--color-oat);
+}
+
+.step-future .stepper-node {
+  background-color: var(--color-latte);
+  color: var(--color-taupe);
+  border: 1px solid var(--color-border);
+}
+
+.node-number {
+  line-height: 1;
+}
+
+.node-check-icon {
+  color: var(--color-ivory);
+}
+
+/* Labels */
+.stepper-label-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  max-width: 130px;
+}
+
+.stepper-label {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--color-taupe);
+  line-height: 1.2;
+}
+
+.step-current .stepper-label {
+  font-weight: 700;
+  color: var(--color-espresso);
+}
+
+.step-completed .stepper-label {
+  font-weight: 600;
+  color: var(--color-cocoa);
+}
+
+.stepper-subtext {
+  font-size: 11px;
+  color: var(--color-taupe);
+}
+
+/* Cancellation Card */
+.stepper-cancelled-card {
+  background-color: var(--color-cancelled-bg);
+  border: 1px solid #eecbc4;
+  border-radius: var(--radius-card);
+  padding: 20px 24px;
+}
+
+.cancelled-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.cancelled-icon-wrapper {
+  color: var(--color-cancelled-text);
+  flex-shrink: 0;
+}
+
+.cancelled-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-cancelled-text);
+  margin-bottom: 2px;
+}
+
+.cancelled-description {
+  font-size: 13.5px;
+  color: #79342d;
+}
+
+.cancellation-reason-box {
+  margin-top: 14px;
+  padding: 10px 14px;
+  background-color: rgba(255, 255, 255, 0.7);
+  border-radius: var(--radius-button);
+  display: flex;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.reason-label {
+  font-weight: 600;
+  color: var(--color-cancelled-text);
+}
+
+.reason-text {
+  color: var(--color-cocoa);
+  font-style: italic;
+}
+
+/* Mobile Vertical Stepper */
+@media (max-width: 768px) {
+  .stepper-track {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+  }
+
+  .stepper-item {
+    width: 100%;
+    flex: none;
+  }
+
+  .stepper-item:last-child {
+    flex: none;
+  }
+
+  .stepper-connector {
+    top: 36px;
+    bottom: -20px;
+    left: 17px;
+    right: auto;
+    width: 2px;
+    height: auto;
+  }
+
+  .stepper-node-wrapper {
+    flex-direction: row;
+    align-items: center;
+    text-align: left;
+    margin: 0;
+    gap: 16px;
+  }
+
+  .stepper-label-wrapper {
+    align-items: flex-start;
+    max-width: none;
+  }
+
+  .stepper-label {
+    font-size: 14px;
+  }
+}

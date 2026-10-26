@@ -1,0 +1,265 @@
+.orders-page-container {
+  width: 100%;
+  padding: var(--page-padding) 0;
+  display: flex;
+  justify-content: center;
+}
+
+.orders-page-wrapper {
+  width: 100%;
+  max-width: var(--content-width);
+  padding: 0 var(--page-padding);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.orders-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.orders-page-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--color-espresso);
+  letter-spacing: -0.02em;
+}
+
+.orders-page-subtitle {
+  font-size: 14.5px;
+  color: var(--color-taupe);
+}
+
+.refresh-btn {
+  padding: 8px 14px;
+}
+
+/* Loading & Error */
+.orders-loading-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.order-card-skeleton {
+  height: 180px;
+  border-radius: var(--radius-card);
+}
+
+.orders-error-box {
+  padding: 32px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.orders-error-icon {
+  color: var(--color-cancelled-text);
+}
+
+.orders-error-text {
+  font-size: 14.5px;
+  color: var(--color-taupe);
+}
+
+/* Empty State */
+.empty-orders-card {
+  padding: 64px 32px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.empty-icon-circle {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background-color: var(--color-latte);
+  color: var(--color-espresso);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+
+.empty-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-espresso);
+}
+
+.empty-description {
+  font-size: 14.5px;
+  color: var(--color-taupe);
+  max-width: 440px;
+  line-height: 1.5;
+}
+
+.empty-cta {
+  margin-top: 8px;
+}
+
+/* Active Orders Grid */
+.active-orders-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 20px;
+}
+
+.active-order-card {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.active-order-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card);
+}
+
+.order-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 14px;
+}
+
+.order-card-number {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-espresso);
+  display: block;
+}
+
+.order-card-date {
+  font-size: 12.5px;
+  color: var(--color-taupe);
+  margin-top: 2px;
+}
+
+.order-card-middle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.card-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.card-metric-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-taupe);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.card-metric-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-cocoa);
+}
+
+.price-highlight {
+  color: var(--color-espresso);
+}
+
+.order-card-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.track-btn {
+  flex: 1;
+}
+
+.queue-btn {
+  padding: 10px 14px;
+}
+
+/* Demo Showcase Panel */
+.demo-showcase-panel {
+  background-color: var(--color-latte);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  padding: 20px 24px;
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.showcase-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-espresso);
+}
+
+.showcase-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.showcase-desc {
+  font-size: 13px;
+  color: var(--color-taupe);
+}
+
+.showcase-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.showcase-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  padding: 6px 12px;
+  border-radius: var(--radius-button);
+  font-size: 13px;
+  color: var(--color-espresso);
+  transition: var(--transition-smooth);
+}
+
+.showcase-pill:hover {
+  background-color: var(--color-oat);
+  transform: translateY(-1px);
+}
+
+.sample-id {
+  font-weight: 700;
+}
+
+.sample-status {
+  font-size: 12px;
+  color: var(--color-taupe);
+}
+
+@media (max-width: 768px) {
+  .orders-page-wrapper {
+    padding: 0 var(--page-padding-mobile);
+  }
+
+  .active-orders-grid {
+    grid-template-columns: 1fr;
+  }
+}
