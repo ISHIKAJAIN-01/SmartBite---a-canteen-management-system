@@ -1,65 +1,91 @@
-/**
- * SmartBite Express Application
- */
 
-const express = require('express');
-const cors = require('cors');
-const dotenv = require('dotenv');
-const orderTrackingRoutes = require('./routes/orderTrackingRoutes');
-
-dotenv.config();
+const express = require("express");
+const cors = require("cors");
+const pool = require("./config/db");
+const ordersRouter = require("./routes/orders");
+const paymentsRouter = require("./routes/payments");
 
 const app = express();
 
-// Security and middleware
-app.use(cors({
-  origin: true, // Allow frontend dev server
-  credentials: true,
-}));
+// Middleware
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+  })
+);
 
 app.use(express.json());
 
-// Request logging in development
-if (process.env.NODE_ENV !== 'production') {
-  app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-    next();
-  });
-}
-
-const db = require('./config/db');
-
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    service: 'SmartBite Member 3 - Order Tracking & Queue API',
-    database: {
-      mode: db.isLiveMySQL() ? 'live_mysql' : 'development_fallback',
-      is_live_mysql: db.isLiveMySQL(),
-      shared_db_reconciliation: 'deferred_to_team_integration_phase',
-    },
+// Home route
+app.get("/", (req, res) => {
+  res.json({
+    message: "Welcome to SmartBite API",
   });
 });
 
-// Mount tracking routes
-app.use('/api', orderTrackingRoutes);
+// Health check API
+app.get("/api/health", (req, res) => {
+  res.json({
+    status: "ok",
+    service: "SmartBite API",
+  });
+});
 
-// 404 handler for undefined API routes
+// Database connection test API
+app.get("/api/db-test", async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      "SELECT DATABASE() AS database_name"
+    );
+
+    res.json({
+      status: "success",
+      message: "MySQL connected successfully!",
+      database: rows[0].database_name,
+    });
+  } catch (error) {
+    console.error("Database test failed:", error.message);
+
+    res.status(500).json({
+      status: "error",
+      message: "Database connection failed",
+    });
+  }
+});
+
+// Feature routers (must stay above the 404 handler)
+app.use("/api/orders", ordersRouter);
+app.use("/api/payments", paymentsRouter);
+
+// 404 route
 app.use((req, res) => {
   res.status(404).json({
-    error: 'Not Found',
-    message: `API route ${req.method} ${req.url} does not exist.`,
+    status: "error",
+    message: "API route not found",
   });
 });
 
-// Centralized error handler
+// Error handler (must be last, and must keep all 4 arguments).
+// Express 5 forwards errors from async route handlers here automatically.
 app.use((err, req, res, next) => {
-  console.error('[SmartBite Server Error]:', err);
-  res.status(err.status || 500).json({
-    error: err.name || 'Internal Server Error',
-    message: err.message || 'An unexpected error occurred on the server.',
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  const status = err.status || err.statusCode || 500;
+  const isClientError = status >= 400 && status < 500;
+
+  if (!isClientError) {
+    console.error("Unhandled error:", err.message);
+  }
+
+  res.status(status).json({
+    status: "error",
+    message: isClientError
+      ? err.type === "entity.parse.failed"
+        ? "Invalid JSON in request body"
+        : err.message
+      : "Internal server error",
   });
 });
 

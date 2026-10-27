@@ -1,27 +1,24 @@
 {
-  "name": "smartbite-server",
+  "name": "server",
   "version": "1.0.0",
-  "description": "SmartBite Backend - Member 3: Order Tracking, Queue Status, and Estimated Pickup Time",
-  "main": "src/server.js",
+  "description": "",
+  "main": "index.js",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "node --watch src/server.js",
-    "test": "node --test src/tests/*.test.js"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js"
   },
-  "keywords": [
-    "smartbite",
-    "order-tracking",
-    "queue-status",
-    "express",
-    "mysql"
-  ],
-  "author": "SmartBite Team - Member 3",
+  "keywords": [],
+  "author": "",
   "license": "ISC",
+  "type": "commonjs",
   "dependencies": {
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "jsonwebtoken": "^9.0.2",
-    "mysql2": "^3.12.0"
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0",
+    "mysql2": "^3.24.6"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
   }
 }

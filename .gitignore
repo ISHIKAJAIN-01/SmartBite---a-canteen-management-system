@@ -1,11 +1,31 @@
-node_modules/
-client/node_modules/
-server/node_modules/
+<<<<<<< HEAD
+# Environment variables and secrets
 .env
 .env.*
 !.env.example
-.DS_Store
+server/.env
+
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Build output
 dist/
 client/dist/
 server/dist/
-coverage/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+=======
+node_modules/
+frontend/node_modules/
+frontend/dist/
+.env
+.env.*
+!.env.example
+>>>>>>> origin/vidushi
