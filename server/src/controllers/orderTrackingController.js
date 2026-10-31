@@ -63,29 +63,37 @@ async function getOrderTracking(req, res) {
       });
     }
 
-    // 3. Fetch order items
+    // 3. Fetch order items using approved preparation_time column
     const [itemRows] = await db.query(
       `SELECT oi.order_item_id, oi.item_id, mi.item_name, oi.quantity,
-              oi.unit_price, oi.subtotal, mi.prep_time_minutes
+              oi.unit_price, oi.subtotal, mi.preparation_time AS prep_time_minutes
        FROM Order_Items oi
        JOIN Menu_Items mi ON oi.item_id = mi.item_id
        WHERE oi.order_id = ?`,
       [orderId]
     );
 
-    // 4. Retrieve pickup instructions from Canteen_Settings
-    let pickupInstructions = null;
-    const [settingsRows] = await db.query(
-      `SELECT setting_value FROM Canteen_Settings WHERE setting_key = ?`,
-      ['pickup_instructions']
-    );
-    if (settingsRows && settingsRows.length > 0) {
-      pickupInstructions = settingsRows[0].setting_value;
-    } else {
-      pickupInstructions = 'Please follow the instructions provided at the canteen counter.';
+    // 4. Retrieve pickup instructions from Canteen_Settings (safe fallback if pending Member 4 table is not yet created)
+    let pickupInstructions = 'Please follow the instructions provided at the canteen counter.';
+    try {
+      const [settingsRows] = await db.query(
+        `SELECT setting_value FROM Canteen_Settings WHERE setting_key = ?`,
+        ['pickup_instructions']
+      );
+      if (settingsRows && settingsRows.length > 0) {
+        pickupInstructions = settingsRows[0].setting_value;
+      }
+    } catch (settingsErr) {
+      if (settingsErr.code === 'ER_NO_SUCH_TABLE' || settingsErr.errno === 1146) {
+        // Expected dependency: Canteen_Settings table is pending Member 4 integration
+        pickupInstructions = 'Please follow the instructions provided at the canteen counter.';
+      } else {
+        // Re-throw unexpected connection or system errors so they are not masked
+        throw settingsErr;
+      }
     }
 
-    // 5. Construct Pickup Information according to status and security policy
+    // 5. Construct Pickup Information according to actual status and security policy
     let pickupData = {
       available: false,
       pickup_code: null,
@@ -104,7 +112,7 @@ async function getOrderTracking(req, res) {
         pickup_code: order.pickup_code,
         instructions: 'This order has already been collected. Thank you for dining with SmartBite!',
       };
-    } else if (order.status === 'Placed' || order.status === 'Preparing') {
+    } else if (order.status === 'Placed' || order.status === 'Pending' || order.status === 'Preparing') {
       pickupData = {
         available: false,
         pickup_code: null,
@@ -118,20 +126,25 @@ async function getOrderTracking(req, res) {
       };
     }
 
-    // Return sanitized tracking payload
+    const formatISO = (d) => (d instanceof Date && !isNaN(d.getTime()) ? d.toISOString() : d);
+    const basePrep = queueService.calculateOrderBasePrepMinutes(itemRows);
+    const isZeroPrep = basePrep === 0;
+
+    // Return sanitized tracking payload preserving actual database status
     return res.status(200).json({
       order: {
         order_id: order.order_id,
         user_id: order.user_id,
-        order_date: order.order_date,
+        order_date: formatISO(order.order_date),
         status: order.status,
         total_amount: parseFloat(order.total_amount),
-        estimated_prep_minutes: order.estimated_prep_minutes,
-        estimated_ready_at: order.estimated_ready_at,
-        actual_ready_at: order.actual_ready_at,
-        cancelled_at: order.cancelled_at,
+        estimated_prep_minutes: isZeroPrep ? null : order.estimated_prep_minutes,
+        estimated_ready_at: isZeroPrep ? null : formatISO(order.estimated_ready_at),
+        actual_ready_at: formatISO(order.actual_ready_at),
+        cancelled_at: formatISO(order.cancelled_at),
         cancellation_reason: order.cancellation_reason,
         special_instructions: order.special_instructions,
+        is_zero_prep: isZeroPrep,
       },
       items: (itemRows || []).map(item => ({
         order_item_id: item.order_item_id,
@@ -195,6 +208,16 @@ async function getOrderQueue(req, res) {
       });
     }
 
+    // Fetch order items with preparation_time so queueService decides zero-prep from current items
+    const [itemRows] = await db.query(
+      `SELECT oi.quantity, mi.preparation_time AS prep_time_minutes
+       FROM Order_Items oi
+       JOIN Menu_Items mi ON oi.item_id = mi.item_id
+       WHERE oi.order_id = ?`,
+      [orderId]
+    );
+    order.items = itemRows || [];
+
     // Calculate queue estimates
     const queueData = await queueService.calculateQueueEstimate(order);
 
@@ -220,7 +243,7 @@ async function getMyActiveOrders(req, res) {
       `SELECT order_id, user_id, order_date, status, total_amount,
               estimated_prep_minutes, estimated_ready_at
        FROM Orders
-       WHERE user_id = ? AND status IN ('Placed', 'Preparing', 'Ready')
+       WHERE user_id = ? AND status IN ('Placed', 'Pending', 'Preparing', 'Ready')
        ORDER BY order_date DESC`,
       [userId]
     );

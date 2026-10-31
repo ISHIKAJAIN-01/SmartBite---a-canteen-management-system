@@ -111,6 +111,11 @@ export default function QueueStatus() {
 
   if (!queueData) return null;
 
+  const isZeroPrep = Boolean(
+    queueData.is_zero_prep ||
+    (queueData.queue_position === null && queueData.estimated_prep_minutes === null && queueData.remaining_minutes === null && !queueData.estimate_available)
+  );
+
   return (
     <div className="queue-page-container">
       <div className="queue-page-wrapper">
@@ -138,7 +143,7 @@ export default function QueueStatus() {
         <div className="queue-header-section">
           <h1 className="queue-title">Kitchen Queue Status</h1>
           <p className="queue-subtitle">
-            Order #{queueData.order_id} • Status and kitchen workload breakdown
+            Order #{queueData.order_id} • {isZeroPrep ? 'Direct Counter Pickup' : 'Status and kitchen workload breakdown'}
           </p>
         </div>
 
@@ -163,23 +168,26 @@ export default function QueueStatus() {
             remainingMinutes={queueData.remaining_minutes}
             estimateAvailable={queueData.estimate_available}
             message={queueData.message}
+            isZeroPrep={isZeroPrep}
           />
 
           {/* Detailed Queue Explanation Box */}
-          <div className="queue-explanation-box">
-            <h4 className="explanation-title">How Canteen Queue Estimates Work</h4>
-            <ul className="explanation-list">
-              <li>
-                <strong>Active Workload:</strong> Estimates are calculated directly from orders currently being prepared in the kitchen, excluding cancelled or already collected orders.
-              </li>
-              <li>
-                <strong>Item Prep Time:</strong> Preparation durations are computed from the specific menu items in your basket and their cooking times.
-              </li>
-              <li>
-                <strong>Kitchen Batching:</strong> Orders for similar items (e.g. sandwiches or beverages) may be prepared concurrently at separate kitchen stations.
-              </li>
-            </ul>
-          </div>
+          {!isZeroPrep && (
+            <div className="queue-explanation-box">
+              <h4 className="explanation-title">How Canteen Queue Estimates Work</h4>
+              <ul className="explanation-list">
+                <li>
+                  <strong>Active Workload:</strong> Estimates are calculated directly from orders currently being prepared in the kitchen, excluding cancelled or already collected orders.
+                </li>
+                <li>
+                  <strong>Item Prep Time:</strong> Preparation durations are computed from the specific menu items in your basket and their cooking times.
+                </li>
+                <li>
+                  <strong>Kitchen Batching:</strong> Orders for similar items (e.g. sandwiches or beverages) may be prepared concurrently at separate kitchen stations.
+                </li>
+              </ul>
+            </div>
+          )}
 
           {/* Action Navigation Buttons */}
           <div className="queue-actions-row">

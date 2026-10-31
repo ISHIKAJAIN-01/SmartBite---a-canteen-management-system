@@ -3,7 +3,7 @@
  * Centralized fetch wrapper handling auth headers, base URLs, and errors.
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
 
 /**
  * Retrieve the current active auth token from localStorage

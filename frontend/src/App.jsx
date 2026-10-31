@@ -15,6 +15,9 @@ import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import MyOrders from "./pages/MyOrders";
 import OrderConfirmation from "./pages/OrderConfirmation";
+import OrderTracking from "./pages/OrderTracking";
+import QueueStatus from "./pages/QueueStatus";
+
 
 function App() {
   return (
@@ -30,6 +33,11 @@ function App() {
             <Route path="/cart" element={<Cart />} />
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/my-orders" element={<MyOrders />} />
+            <Route path="/orders/:orderId/tracking" element={<OrderTracking />} />
+            <Route path="/orders/:orderId/queue" element={<QueueStatus />} />
+
+
+
             <Route
               path="/order-confirmation"
               element={<OrderConfirmation />}

@@ -268,10 +268,12 @@ export default function OrderTracking() {
             <QueueInfo
               variant="panel"
               status={order.status}
-              estimatedReadyAt={order.estimated_ready_at}
+              queuePosition={queueData?.queue_position}
+              estimatedReadyAt={queueData?.estimated_ready_at || order.estimated_ready_at}
               remainingMinutes={queueData?.remaining_minutes}
               estimateAvailable={queueData ? queueData.estimate_available : Boolean(order.estimated_ready_at)}
               message={queueData?.message}
+              isZeroPrep={Boolean(queueData?.is_zero_prep || order.is_zero_prep || order.estimated_prep_minutes === 0)}
             />
           </div>
 
@@ -290,7 +292,7 @@ export default function OrderTracking() {
           </div>
 
           {/* Quick link to Queue Status view */}
-          {['Placed', 'Preparing'].includes(order.status) && (
+          {['Placed', 'Preparing'].includes(order.status) && typeof queueData?.queue_position === 'number' && queueData.queue_position > 0 && (
             <div className="queue-quick-banner">
               <div className="banner-text">
                 <Clock size={16} />

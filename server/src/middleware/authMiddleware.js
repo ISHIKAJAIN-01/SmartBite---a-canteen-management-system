@@ -53,10 +53,21 @@ async function authenticate(req, res, next) {
     if (!token && isDevMode && devUserIdHeader) {
       const devUserId = parseInt(devUserIdHeader, 10);
       if (!isNaN(devUserId)) {
-        const rows = await db.query('SELECT user_id, name, email, role FROM Users WHERE user_id = ?', [devUserId]);
-        if (rows && rows.length > 0) {
-          req.user = rows[0];
-          return next();
+        try {
+          // Supports merged 11-table schema (Users.full_name and Roles.role_name)
+          const [rows] = await db.query(
+            `SELECT u.user_id, u.full_name AS name, u.email, COALESCE(r.role_name, 'student') AS role
+             FROM Users u
+             LEFT JOIN Roles r ON u.role_id = r.role_id
+             WHERE u.user_id = ?`,
+            [devUserId]
+          );
+          if (rows && rows.length > 0) {
+            req.user = rows[0];
+            return next();
+          }
+        } catch (queryErr) {
+          // Database error or offline in development
         }
       }
     }

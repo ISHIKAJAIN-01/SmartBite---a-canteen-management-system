@@ -23,12 +23,14 @@ export default function QueueInfo({
   remainingMinutes,
   estimateAvailable = true,
   message,
+  isZeroPrep = false,
   variant = 'panel', // 'panel' (espresso dark) or 'card' (light card for queue page)
 }) {
   const formattedTime = formatLocalTime(estimatedReadyAt);
 
   // Status specific messages
   const defaultMessages = {
+    Pending: 'Your order is in the queue.',
     Placed: 'Your order is in the queue.',
     Preparing: 'The canteen is preparing your order.',
     Ready: 'Your order is ready. Please collect it from the counter.',
@@ -62,7 +64,22 @@ export default function QueueInfo({
     );
   }
 
-  // 3. Active Order (Placed / Preparing) with Estimate Unavailable
+  // 3. Zero-Prep Order State (no kitchen preparation needed)
+  if (isZeroPrep || (queuePosition === null && remainingMinutes === null && !estimatedReadyAt)) {
+    return (
+      <div className={`queue-info-root variant-${variant} state-unavailable`}>
+        <div className="queue-status-message">
+          <Info size={18} className="status-msg-icon" />
+          <span>{message || 'No preparation time needed for this order.'}</span>
+        </div>
+        <p className="queue-disclaimer">
+          This order consists of items ready for immediate counter pickup.
+        </p>
+      </div>
+    );
+  }
+
+  // 4. Active Order (Placed / Preparing) with Estimate Unavailable
   if (!estimateAvailable) {
     return (
       <div className={`queue-info-root variant-${variant} state-unavailable`}>
@@ -71,13 +88,19 @@ export default function QueueInfo({
           <span>Pickup estimate unavailable</span>
         </div>
         <p className="queue-disclaimer">
-          The kitchen has received your order and is processing it shortly.
+          {displayMessage || 'The kitchen has received your order and is processing it shortly.'}
         </p>
       </div>
     );
   }
 
-  // 4. Active Order with Estimate & Queue Details
+  // 5. Active Order with Estimate & Queue Details
+  const hasAnyMetric = Boolean(
+    formattedTime ||
+    (typeof remainingMinutes === 'number' && remainingMinutes > 0) ||
+    (typeof queuePosition === 'number' && queuePosition > 0)
+  );
+
   return (
     <div className={`queue-info-root variant-${variant}`} role="region" aria-label="Estimated pickup and queue status">
       {/* Status message header */}
@@ -87,36 +110,40 @@ export default function QueueInfo({
       </div>
 
       {/* Metrics Row */}
-      <div className="queue-metrics-grid">
-        {/* Estimated Ready Time */}
-        <div className="metric-box">
-          <span className="metric-label">Estimated Ready Time</span>
-          <div className="metric-value">
-            {formattedTime || 'Unavailable'}
-          </div>
+      {hasAnyMetric && (
+        <div className="queue-metrics-grid">
+          {/* Estimated Ready Time */}
+          {formattedTime && (
+            <div className="metric-box">
+              <span className="metric-label">Estimated Ready Time</span>
+              <div className="metric-value">
+                {formattedTime}
+              </div>
+            </div>
+          )}
+
+          {/* Remaining Waiting Duration (only shown if positive, never ~0 mins) */}
+          {typeof remainingMinutes === 'number' && remainingMinutes > 0 && (
+            <div className="metric-box">
+              <span className="metric-label">Estimated Wait</span>
+              <div className="metric-value">
+                ~{remainingMinutes} min{remainingMinutes === 1 ? '' : 's'}
+              </div>
+            </div>
+          )}
+
+          {/* Queue Position (Only shown if verified positive integer from backend) */}
+          {typeof queuePosition === 'number' && queuePosition > 0 && (
+            <div className="metric-box">
+              <span className="metric-label">Queue Position</span>
+              <div className="metric-value metric-position">
+                <Users size={18} className="position-icon" />
+                <span>#{queuePosition} in line</span>
+              </div>
+            </div>
+          )}
         </div>
-
-        {/* Remaining Waiting Duration */}
-        {remainingMinutes !== null && remainingMinutes !== undefined && (
-          <div className="metric-box">
-            <span className="metric-label">Estimated Wait</span>
-            <div className="metric-value">
-              ~{remainingMinutes} min{remainingMinutes === 1 ? '' : 's'}
-            </div>
-          </div>
-        )}
-
-        {/* Queue Position (Only shown if verified positive integer from backend) */}
-        {typeof queuePosition === 'number' && queuePosition > 0 && (
-          <div className="metric-box">
-            <span className="metric-label">Queue Position</span>
-            <div className="metric-value metric-position">
-              <Users size={18} className="position-icon" />
-              <span>#{queuePosition} in line</span>
-            </div>
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Disclaimer */}
       <div className="queue-disclaimer">

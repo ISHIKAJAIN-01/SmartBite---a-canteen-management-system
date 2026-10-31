@@ -11,6 +11,11 @@ const STATUS_CONFIG = {
     className: 'badge-placed',
     icon: Clock,
   },
+  Pending: {
+  label: 'Order placed',
+  className: 'badge-placed',
+  icon: Clock,
+},
   Preparing: {
     label: 'Preparing your order',
     className: 'badge-preparing',
