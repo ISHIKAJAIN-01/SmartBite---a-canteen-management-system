@@ -33,7 +33,7 @@ async function getOrderTracking(req, res) {
     }
 
     // 1. Fetch order details
-    const orderRows = await db.query(
+    const [orderRows] = await db.query(
       `SELECT order_id, user_id, order_date, status, total_amount, pickup_code,
               special_instructions, estimated_prep_minutes, estimated_ready_at,
               actual_ready_at, cancelled_at, cancellation_reason
@@ -52,7 +52,8 @@ async function getOrderTracking(req, res) {
     const order = orderRows[0];
 
     // 2. Strict authorization: Verify order ownership
-    const isOwner = req.user && req.user.user_id === order.user_id;
+    const isOwner =
+  req.user && Number(req.user.user_id) === Number(order.user_id);
     const isStaff = req.user && (req.user.role === 'staff' || req.user.role === 'admin');
 
     if (!isOwner && !isStaff) {
@@ -63,7 +64,7 @@ async function getOrderTracking(req, res) {
     }
 
     // 3. Fetch order items
-    const itemRows = await db.query(
+    const [itemRows] = await db.query(
       `SELECT oi.order_item_id, oi.item_id, mi.item_name, oi.quantity,
               oi.unit_price, oi.subtotal, mi.prep_time_minutes
        FROM Order_Items oi
@@ -74,7 +75,7 @@ async function getOrderTracking(req, res) {
 
     // 4. Retrieve pickup instructions from Canteen_Settings
     let pickupInstructions = null;
-    const settingsRows = await db.query(
+    const [settingsRows] = await db.query(
       `SELECT setting_value FROM Canteen_Settings WHERE setting_key = ?`,
       ['pickup_instructions']
     );
@@ -165,7 +166,7 @@ async function getOrderQueue(req, res) {
       });
     }
 
-    const orderRows = await db.query(
+    const [orderRows] = await db.query(
       `SELECT order_id, user_id, order_date, status, estimated_prep_minutes,
               estimated_ready_at, actual_ready_at, cancelled_at
        FROM Orders
@@ -183,7 +184,8 @@ async function getOrderQueue(req, res) {
     const order = orderRows[0];
 
     // Authorization check
-    const isOwner = req.user && req.user.user_id === order.user_id;
+    const isOwner =
+  req.user && Number(req.user.user_id) === Number(order.user_id);
     const isStaff = req.user && (req.user.role === 'staff' || req.user.role === 'admin');
 
     if (!isOwner && !isStaff) {
@@ -214,7 +216,7 @@ async function getMyActiveOrders(req, res) {
   try {
     const userId = req.user.user_id;
 
-    const orders = await db.query(
+    const [orders] = await db.query(
       `SELECT order_id, user_id, order_date, status, total_amount,
               estimated_prep_minutes, estimated_ready_at
        FROM Orders

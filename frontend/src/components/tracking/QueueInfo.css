@@ -1,0 +1,174 @@
+.queue-info-root {
+  border-radius: var(--radius-card);
+  padding: 22px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: var(--transition-smooth);
+}
+
+/* Variant 1: Prominent Espresso Panel (Used on Tracking Page) */
+.variant-panel {
+  background-color: var(--color-espresso);
+  color: var(--color-ivory);
+  border: 1px solid #4a2c1f;
+}
+
+.variant-panel .queue-status-message {
+  color: #f7e6d2;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(248, 241, 232, 0.15);
+  padding-bottom: 12px;
+}
+
+.variant-panel .metric-label {
+  color: #d1bda9;
+}
+
+.variant-panel .metric-value {
+  color: #FFFFFF;
+}
+
+.variant-panel .queue-disclaimer {
+  color: #c4b09c;
+}
+
+/* Variant 2: Light Card (Used on Queue Status Page) */
+.variant-card {
+  background-color: var(--color-card-bg);
+  color: var(--color-cocoa);
+  border: 1px solid var(--color-border);
+}
+
+.variant-card .queue-status-message {
+  color: var(--color-espresso);
+  font-size: 14.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 12px;
+}
+
+.variant-card .metric-label {
+  color: var(--color-taupe);
+}
+
+.variant-card .metric-value {
+  color: var(--color-espresso);
+}
+
+.variant-card .queue-disclaimer {
+  color: var(--color-taupe);
+}
+
+/* Metrics Grid */
+.queue-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+}
+
+.metric-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.metric-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.metric-value {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.metric-position {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 20px;
+}
+
+.position-icon {
+  flex-shrink: 0;
+}
+
+/* Disclaimer text */
+.queue-disclaimer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
+.disclaimer-icon {
+  flex-shrink: 0;
+}
+
+/* State Modifiers */
+.state-cancelled {
+  background-color: var(--color-cancelled-bg);
+  border: 1px solid #ecc1b9;
+  color: var(--color-cancelled-text);
+}
+
+.state-cancelled .queue-status-message {
+  border-bottom: none;
+  padding-bottom: 0;
+  color: var(--color-cancelled-text);
+  font-weight: 600;
+}
+
+.state-ready {
+  background-color: var(--color-ready-bg);
+  border: 1px solid #cadcc7;
+  color: var(--color-ready-text);
+}
+
+.state-ready .queue-status-message {
+  border-bottom: none;
+  padding-bottom: 0;
+  color: var(--color-ready-text);
+  font-weight: 600;
+}
+
+.state-unavailable .queue-status-message {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.text-cancelled {
+  color: var(--color-cancelled-text);
+}
+
+.text-ready {
+  color: var(--color-ready-text);
+}
+
+@media (max-width: 600px) {
+  .queue-info-root {
+    padding: 16px 18px;
+  }
+
+  .queue-metrics-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .metric-value {
+    font-size: 20px;
+  }
+}
