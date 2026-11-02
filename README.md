@@ -1,1 +1,0 @@
-# SmartBite---a-canteen-management-system
