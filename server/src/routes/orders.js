@@ -1,7 +1,12 @@
-
 const express = require("express");
 const pool = require("../config/db");
 const menuSchema = require("../config/menuSchema");
+const queueService = require("../services/queueService");
+
+const {
+  authenticateToken,
+  requireStudent,
+} = require("../../middleware/authMiddleware");
 
 const router = express.Router();
 
@@ -82,17 +87,28 @@ function validateOrderBody(body) {
   }
 
   const errors = [];
-  const userId = toPositiveInt(body.user_id);
   const cartType = body.cart_type;
-
-  if (userId === null) {
-    errors.push("user_id must be a positive integer");
-  }
 
   if (!Object.values(CART_TYPES).includes(cartType)) {
     errors.push(
       'cart_type must be "meals_drinks" or "snacks_desserts"'
     );
+  }
+
+  const specialInstructions =
+    body.special_instructions === undefined ||
+    body.special_instructions === null
+      ? null
+      : typeof body.special_instructions === "string"
+        ? body.special_instructions.trim().slice(0, 2000)
+        : null;
+
+  if (
+    body.special_instructions !== undefined &&
+    body.special_instructions !== null &&
+    typeof body.special_instructions !== "string"
+  ) {
+    errors.push("special_instructions must be a string");
   }
 
   const lines = new Map();
@@ -133,7 +149,12 @@ function validateOrderBody(body) {
     }
   }
 
-  return { errors, userId, cartType, lines };
+  return {
+    errors,
+    cartType,
+    lines,
+    specialInstructions,
+  };
 }
 
 function getMenuConfig() {
@@ -150,7 +171,6 @@ function getMenuConfig() {
   return { table, idColumn, priceColumn };
 }
 
-// Menu data lives in smartbite; order data stays in canteen_db.
 function menuLookupSql(config, count) {
   const placeholders = Array(count).fill("?").join(", ");
 
@@ -167,7 +187,6 @@ function menuLookupSql(config, count) {
   `;
 }
 
-// Order_Items stays in canteen_db; menu names come from smartbite.
 function orderItemsSql(config) {
   return `
     SELECT
@@ -202,38 +221,48 @@ function sendError(res, error) {
   });
 }
 
+// All customer order routes require a logged-in student.
+router.use(authenticateToken, requireStudent);
+
 // GET /api/orders
-// Optional filter: /api/orders?user_id=1
+// Returns only the logged-in student's orders.
 router.get("/", async (req, res) => {
-  const userId =
-    req.query.user_id === undefined
-      ? null
-      : toPositiveInt(req.query.user_id);
-
-  if (req.query.user_id !== undefined && userId === null) {
-    return res.status(400).json({
-      status: "error",
-      message: "user_id must be a positive integer",
-    });
-  }
-
   try {
-    let sql = `
-      SELECT order_id, user_id, order_date, status,
-             total_amount, pickup_code, cart_type
-      FROM Orders
-    `;
+    const userId = req.user.userId;
 
-    const params = [];
+    const [orders] = await pool.execute(
+      `SELECT order_id, user_id, order_date, status,
+              total_amount, pickup_code, cart_type
+       FROM Orders
+       WHERE user_id = ?
+       ORDER BY order_date DESC, order_id DESC`,
+      [userId]
+    );
 
-    if (userId !== null) {
-      sql += " WHERE user_id = ?";
-      params.push(userId);
-    }
+    return res.json({
+      status: "success",
+      count: orders.length,
+      orders,
+    });
+  } catch (error) {
+    return sendError(res, error);
+  }
+});
 
-    sql += " ORDER BY order_date DESC, order_id DESC";
+// GET /api/orders/my-orders
+// Dedicated endpoint for My Orders page.
+router.get("/my-orders", async (req, res) => {
+  try {
+    const userId = req.user.userId;
 
-    const [orders] = await pool.execute(sql, params);
+    const [orders] = await pool.execute(
+      `SELECT order_id, user_id, order_date, status,
+              total_amount, pickup_code, cart_type
+       FROM Orders
+       WHERE user_id = ?
+       ORDER BY order_date DESC, order_id DESC`,
+      [userId]
+    );
 
     return res.json({
       status: "success",
@@ -246,13 +275,21 @@ router.get("/", async (req, res) => {
 });
 
 // GET /api/orders/user/:userId
+// A student can access only their own orders.
 router.get("/user/:userId", async (req, res) => {
-  const userId = toPositiveInt(req.params.userId);
+  const requestedUserId = toPositiveInt(req.params.userId);
 
-  if (userId === null) {
+  if (requestedUserId === null) {
     return res.status(400).json({
       status: "error",
       message: "Invalid user ID",
+    });
+  }
+
+  if (requestedUserId !== Number(req.user.userId)) {
+    return res.status(403).json({
+      status: "error",
+      message: "You cannot access another user's orders",
     });
   }
 
@@ -263,7 +300,7 @@ router.get("/user/:userId", async (req, res) => {
        FROM Orders
        WHERE user_id = ?
        ORDER BY order_date DESC, order_id DESC`,
-      [userId]
+      [requestedUserId]
     );
 
     return res.json({
@@ -297,8 +334,8 @@ router.get("/:id", async (req, res) => {
               actual_ready_at, cancelled_at, cancellation_reason,
               cart_type
        FROM Orders
-       WHERE order_id = ?`,
-      [orderId]
+       WHERE order_id = ? AND user_id = ?`,
+      [orderId, req.user.userId]
     );
 
     if (orders.length === 0) {
@@ -326,10 +363,14 @@ router.get("/:id", async (req, res) => {
 });
 
 // POST /api/orders
-// Body: { user_id, cart_type, items: [{ item_id, quantity }] }
+// user_id is obtained from the verified JWT, never from the request body.
 router.post("/", async (req, res) => {
-  const { errors, userId, cartType, lines } =
-    validateOrderBody(req.body);
+  const {
+    errors,
+    cartType,
+    lines,
+    specialInstructions,
+  } = validateOrderBody(req.body);
 
   if (errors.length > 0) {
     return res.status(400).json({
@@ -338,6 +379,8 @@ router.post("/", async (req, res) => {
       errors,
     });
   }
+
+  const userId = Number(req.user.userId);
 
   let config;
 
@@ -407,8 +450,7 @@ router.post("/", async (req, res) => {
 
       const quantity = lines.get(itemId);
       const subtotalCents = unitCents * quantity;
-
-      totalCents += subtotalCents;
+totalCents += subtotalCents;
 
       return {
         item_id: itemId,
@@ -429,9 +471,15 @@ router.post("/", async (req, res) => {
 
     const [orderResult] = await connection.execute(
       `INSERT INTO Orders
-         (user_id, status, total_amount, cart_type)
-       VALUES (?, ?, ?, ?)`,
-      [userId, ORDER_STATUS_PENDING, totalAmount, cartType]
+         (user_id, status, total_amount, cart_type, special_instructions)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        userId,
+        ORDER_STATUS_PENDING,
+        totalAmount,
+        cartType,
+        specialInstructions,
+      ]
     );
 
     const orderId = orderResult.insertId;
@@ -457,6 +505,24 @@ router.post("/", async (req, res) => {
 
     await connection.commit();
 
+    // Order + items are committed. Calculate initial queue estimate (best-effort).
+    // Status stays Pending — queueService treats Pending as an active queue status.
+    // Failure here must NOT undo the order.
+    let queueEstimate = null;
+    try {
+      queueEstimate = await queueService.calculateInitialOrderEstimate({
+        order_id: orderId,
+        status: ORDER_STATUS_PENDING,
+        order_date: new Date(),
+        user_id: userId,
+      });
+    } catch (estimateError) {
+      console.warn(
+        "[Orders] Initial queue estimate failed (order still created):",
+        estimateError.message
+      );
+    }
+
     return res.status(201).json({
       status: "success",
       message: "Order placed successfully",
@@ -466,7 +532,12 @@ router.post("/", async (req, res) => {
         cart_type: cartType,
         status: ORDER_STATUS_PENDING,
         total_amount: totalAmount,
+        special_instructions: specialInstructions,
         items: orderLines,
+        estimated_prep_minutes:
+          queueEstimate?.estimated_prep_minutes ?? null,
+        estimated_ready_at: queueEstimate?.estimated_ready_at ?? null,
+        queue_position: queueEstimate?.queue_position ?? null,
       },
     });
   } catch (error) {
@@ -495,7 +566,6 @@ router.post("/", async (req, res) => {
 });
 
 // PATCH /api/orders/:id/cancel
-// Body (optional): { reason: "Changed my mind" }
 router.patch("/:id/cancel", async (req, res) => {
   const orderId = toPositiveInt(req.params.id);
 
@@ -530,6 +600,14 @@ router.patch("/:id/cancel", async (req, res) => {
     }
 
     const order = orders[0];
+
+    // Ownership check
+    if (Number(order.user_id) !== Number(req.user.userId)) {
+      throw new OrderRequestError(
+        403,
+        "You cannot cancel another user's order"
+      );
+    }
 
     if (order.cart_type !== CART_TYPES.SNACKS_DESSERTS) {
       throw new OrderRequestError(

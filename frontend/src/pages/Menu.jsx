@@ -1,11 +1,18 @@
+
 import { useCart } from '../context/CartContext.jsx'
 import { useLocation } from 'react-router-dom'
-import { useMemo, useState } from 'react'
-import { useEffect } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { Search } from 'lucide-react'
 import FoodCard from '../components/FoodCard'
 
-const categories = ['All', 'Meals', 'Drinks', 'Snacks', 'Desserts']
+const categories = [
+    'All',
+    'Meals',
+    'Drinks',
+    'Snacks',
+    'Desserts',
+    'My Favourites',
+]
 
 // Food image URLs. Items without a photo use their emoji in FoodCard.
 const foodImages = {
@@ -83,7 +90,7 @@ const menuItems = [
     { id: 62, name: 'Aloo Tikki Sub', price: 80, emoji: '🥪' },
     { id: 63, name: 'Aloo Tikki Sub with Cheese', price: 95, emoji: '🥪' },
 
-    // Bottled drinks: ready to serve
+    // Bottled drinks
     { id: 64, name: 'Coke (250 ml)', price: 20, emoji: '🥤' },
     { id: 65, name: 'Coke (750 ml)', price: 40, emoji: '🥤' },
     { id: 66, name: 'Thums Up (250 ml)', price: 20, emoji: '🥤' },
@@ -132,89 +139,306 @@ function Menu() {
     const [activeCategory, setActiveCategory] = useState('All')
     const [availability, setAvailability] = useState({})
     const [databaseItemIds, setDatabaseItemIds] = useState({})
-    useEffect(() => {
-    async function fetchAvailability() {
-        try {
-            const response = await fetch('http://localhost:5000/api/menu')
+    const [likesByItemId, setLikesByItemId] = useState({})
+    const [favouritesByItemId, setFavouritesByItemId] = useState({})
+    const [notice, setNotice] = useState('')
 
-            if (!response.ok) {
-                throw new Error('Failed to fetch menu availability')
-            }
-
-            const items = await response.json()
-
-            const availabilityMap = {}
-            const itemIdMap = {}
-
-           items.forEach((item) => {
-             availabilityMap[item.name] = Boolean(item.available)
-             itemIdMap[item.name] = item.id
-            })
-
-setDatabaseItemIds(itemIdMap)
-setAvailability(availabilityMap)
-        } catch (error) {
-            console.error('Error fetching menu availability:', error)
-        }
-    }
-
-    fetchAvailability()
-}, [])
-    
     const location = useLocation()
+
     const [searchTerm, setSearchTerm] = useState(
         location.state?.searchTerm || ''
     )
+
     const {
         preparedCart,
         readyToServeCart,
         addToCart,
     } = useCart()
-    const [notice, setNotice] = useState('')
 
+    // Fetch menu availability and actual database IDs
+    useEffect(() => {
+        async function fetchAvailability() {
+            try {
+                const response = await fetch(
+                    'http://localhost:5001/api/menu'
+                )
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch menu availability')
+                }
+
+                const items = await response.json()
+
+                const availabilityMap = {}
+                const itemIdMap = {}
+
+                items.forEach((item) => {
+                    availabilityMap[item.name] = Boolean(item.available)
+                    itemIdMap[item.name] = item.id
+                })
+
+                setDatabaseItemIds(itemIdMap)
+                setAvailability(availabilityMap)
+            } catch (error) {
+                console.error('Error fetching menu availability:', error)
+            }
+        }
+
+        fetchAvailability()
+    }, [])
+
+    // Fetch existing likes and current student's like status
+    useEffect(() => {
+        async function fetchLikes() {
+            const token = localStorage.getItem('token')
+
+            if (!token) return
+
+            try {
+                const response = await fetch(
+                    'http://localhost:5001/api/product-likes',
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                        },
+                    }
+                )
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch product likes')
+                }
+
+                const likes = await response.json()
+                const likesMap = {}
+
+                likes.forEach((like) => {
+                    likesMap[like.item_id] = {
+                        likeCount: like.likeCount,
+                        isLiked: like.isLiked,
+                    }
+                })
+
+                setLikesByItemId(likesMap)
+            } catch (error) {
+                console.error('Error fetching product likes:', error)
+            }
+        }
+
+        fetchLikes()
+    }, [])
+
+    // Fetch only this student's favourites
+    useEffect(() => {
+        async function fetchFavourites() {
+            const token = localStorage.getItem('token')
+
+            if (!token) return
+
+            try {
+                const response = await fetch(
+                    'http://localhost:5001/api/favorites',
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                        },
+                    }
+                )
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch favourites')
+                }
+
+                const favourites = await response.json()
+                const favouritesMap = {}
+
+                favourites.forEach((favourite) => {
+                    favouritesMap[favourite.item_id] = true
+                })
+
+                setFavouritesByItemId(favouritesMap)
+            } catch (error) {
+                console.error('Error fetching favourites:', error)
+            }
+        }
+
+        fetchFavourites()
+    }, [])
+
+    // Like or unlike a product
+    async function handleToggleLike(item) {
+        const token = localStorage.getItem('token')
+        const databaseId = databaseItemIds[item.name]
+
+        if (!token) {
+            setNotice('Please log in to like a product.')
+            return
+        }
+
+        if (!databaseId) {
+            setNotice('Menu data is still loading. Please try again.')
+            return
+        }
+
+        const currentLike = likesByItemId[databaseId] || {
+            likeCount: 0,
+            isLiked: false,
+        }
+
+        try {
+            const response = await fetch(
+                `http://localhost:5001/api/product-likes/${databaseId}`,
+                {
+                    method: currentLike.isLiked ? 'DELETE' : 'POST',
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            )
+
+            const data = await response.json()
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Could not update like')
+            }
+
+            setLikesByItemId((previous) => ({
+                ...previous,
+                [databaseId]: {
+                    likeCount: data.likeCount,
+                    isLiked: data.isLiked,
+                },
+            }))
+        } catch (error) {
+            console.error('Like update failed:', error)
+            setNotice(error.message)
+        }
+    }
+
+    // Add or remove a product from favourites
+    async function handleToggleFavourite(item) {
+        const token = localStorage.getItem('token')
+        const databaseId = databaseItemIds[item.name]
+
+        if (!token) {
+            setNotice('Please log in to add favourites.')
+            return
+        }
+
+        if (!databaseId) {
+            setNotice('Menu data is still loading. Please try again.')
+            return
+        }
+
+        const isFavourite = Boolean(favouritesByItemId[databaseId])
+
+        try {
+            const response = await fetch(
+                `http://localhost:5001/api/favorites/${databaseId}`,
+                {
+                    method: isFavourite ? 'DELETE' : 'POST',
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            )
+
+            const data = await response.json()
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Could not update favourite')
+            }
+
+            setFavouritesByItemId((previous) => {
+                const updated = { ...previous }
+
+                if (data.isFavourite) {
+                    updated[databaseId] = true
+                } else {
+                    delete updated[databaseId]
+                }
+
+                return updated
+            })
+        } catch (error) {
+            console.error('Favourite update failed:', error)
+            setNotice(error.message)
+        }
+    }
+
+    // Add product to cart
+    function handleAddToCart(item) {
+        const databaseId = databaseItemIds[item.name]
+
+        if (!databaseId) {
+            setNotice('Menu data is still loading. Please try again.')
+            return
+        }
+
+        addToCart({
+            ...item,
+            item_id: databaseId,
+        })
+
+        setNotice(
+            item.preparationType === 'readyToServe'
+                ? `${item.name} added to your Ready to Serve cart.`
+                : `${item.name} added to your Will Be Prepared cart.`
+        )
+    }
+
+    // Filter menu items and sort by most liked
     const filteredItems = useMemo(() => {
         const query = searchTerm.trim().toLowerCase()
 
-        return menuItems.filter((item) => {
-         const matchesCategory =
-          activeCategory === 'All' || item.category === activeCategory
+        const filtered = menuItems.filter((item) => {
+            const databaseId = databaseItemIds[item.name]
 
-          const matchesSearch = item.name.toLowerCase().includes(query)
+            const isFavourite = Boolean(
+                favouritesByItemId[databaseId]
+            )
 
-          const hasAvailabilityData = Object.keys(availability).length > 0
-          const isAvailable =
-           !hasAvailabilityData || availability[item.name] === true
+            const matchesCategory =
+                activeCategory === 'All' ||
+                (activeCategory === 'My Favourites'
+                    ? isFavourite
+                    : item.category === activeCategory)
 
-         return isAvailable && matchesCategory && matchesSearch
+            const matchesSearch =
+                item.name.toLowerCase().includes(query)
+
+            const hasAvailabilityData =
+                Object.keys(availability).length > 0
+
+            const isAvailable =
+                !hasAvailabilityData ||
+                availability[item.name] === true
+
+            return isAvailable && matchesCategory && matchesSearch
         })
-   }, [activeCategory, searchTerm, availability])
 
+        // Highest like count first
+        return filtered.sort((a, b) => {
+            const likesA =
+                likesByItemId[databaseItemIds[a.name]]?.likeCount ?? 0
 
+            const likesB =
+                likesByItemId[databaseItemIds[b.name]]?.likeCount ?? 0
 
-    function handleAddToCart(item) {
-      const databaseId = databaseItemIds[item.name]
-
-      if (!databaseId) {
-         setNotice('Menu data is still loading. Please try again.')
-         return
-       }
-
-      addToCart({
-          ...item,
-          item_id: databaseId,
-       })
-
-      setNotice(
-          item.preparationType === 'readyToServe'
-              ? `${item.name} added to your Ready to Serve cart.`
-              : `${item.name} added to your Will Be Prepared cart.`
-      )
-  }
-
-
+            return likesB - likesA
+        })
+    }, [
+        activeCategory,
+        searchTerm,
+        availability,
+        likesByItemId,
+        favouritesByItemId,
+        databaseItemIds,
+    ])
 
     return (
         <main className="mx-auto w-full max-w-7xl flex-1 px-6 py-12 md:px-8">
+
+            {/* Page Header */}
             <section className="mb-10">
                 <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-[#968575]">
                     Your College Canteen
@@ -225,6 +449,7 @@ setAvailability(availabilityMap)
                         <h1 className="text-4xl font-semibold text-[#382117] md:text-5xl">
                             Explore the Menu
                         </h1>
+
                         <p className="mt-3 max-w-2xl leading-7 text-[#706052]">
                             Browse your campus favourites, order ahead, and collect your
                             food from the canteen counter.
@@ -233,30 +458,35 @@ setAvailability(availabilityMap)
 
                     <div className="flex flex-col gap-3 rounded-xl border border-[#E5D9C9] bg-white px-4 py-3 text-[#382117] sm:flex-row sm:gap-6">
                         <div>
-                            <p className="text-sm font-semibold">Will Be Prepared</p>
+                            <p className="text-sm font-semibold">
+                                Will Be Prepared
+                            </p>
+
                             <p className="text-xs text-[#706052]">
                                 {preparedCart.reduce(
                                     (total, item) => total + item.quantity,
                                     0
-                                )}{' '}
-                                items
+                                )} items
                             </p>
                         </div>
 
                         <div>
-                            <p className="text-sm font-semibold">Ready to Serve</p>
+                            <p className="text-sm font-semibold">
+                                Ready to Serve
+                            </p>
+
                             <p className="text-xs text-[#706052]">
                                 {readyToServeCart.reduce(
                                     (total, item) => total + item.quantity,
                                     0
-                                )}{' '}
-                                items
+                                )} items
                             </p>
                         </div>
                     </div>
                 </div>
             </section>
 
+            {/* Categories and Search */}
             <section className="mb-8 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
                 <div className="flex flex-wrap gap-2">
                     {categories.map((category) => (
@@ -264,18 +494,24 @@ setAvailability(availabilityMap)
                             key={category}
                             type="button"
                             onClick={() => setActiveCategory(category)}
-                            className={`rounded-full px-5 py-2.5 text-sm font-medium transition ${activeCategory === category
-                                ? 'bg-[#382117] text-white'
-                                : 'border border-[#E5D9C9] bg-white text-[#706052] hover:bg-[#F2E6D1]'
-                                }`}
+                            className={`rounded-full px-5 py-2.5 text-sm font-medium transition ${
+                                activeCategory === category
+                                    ? 'bg-[#382117] text-white'
+                                    : 'border border-[#E5D9C9] bg-white text-[#706052] hover:bg-[#F2E6D1]'
+                            }`}
                         >
+                            {category === 'My Favourites' && '♥ '}
                             {category}
                         </button>
                     ))}
                 </div>
 
                 <label className="flex w-full items-center gap-3 rounded-xl border border-[#E5D9C9] bg-white px-4 py-3 md:max-w-sm">
-                    <Search size={19} className="shrink-0 text-[#968575]" />
+                    <Search
+                        size={19}
+                        className="shrink-0 text-[#968575]"
+                    />
+
                     <input
                         type="search"
                         value={searchTerm}
@@ -287,6 +523,7 @@ setAvailability(availabilityMap)
                 </label>
             </section>
 
+            {/* Notification */}
             {notice && (
                 <p
                     role="status"
@@ -296,29 +533,58 @@ setAvailability(availabilityMap)
                 </p>
             )}
 
+            {/* Menu Count */}
             <p className="mb-5 text-sm text-[#706052]">
                 Showing {filteredItems.length}{' '}
                 {filteredItems.length === 1 ? 'item' : 'items'}
+                {activeCategory === 'My Favourites' && ' in your favourites'}
             </p>
 
+            {/* Food Cards */}
             {filteredItems.length > 0 ? (
                 <section className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {filteredItems.map((item) => (
-                        <FoodCard
-                            key={item.id}
-                            item={item}
-                            onAddToCart={handleAddToCart}
-                        />
-                    ))}
+                    {filteredItems.map((item) => {
+                        const databaseId = databaseItemIds[item.name]
+
+                        const likeData = likesByItemId[databaseId] || {
+                            likeCount: 0,
+                            isLiked: false,
+                        }
+
+                        const isFavourite = Boolean(
+                            favouritesByItemId[databaseId]
+                        )
+
+                        return (
+                            <FoodCard
+                                key={item.id}
+                                item={{
+                                    ...item,
+                                    likeCount: likeData.likeCount,
+                                    isLiked: likeData.isLiked,
+                                    isFavourite,
+                                }}
+                                onAddToCart={handleAddToCart}
+                                onToggleLike={handleToggleLike}
+                                onToggleFavourite={handleToggleFavourite}
+                            />
+                        )
+                    })}
                 </section>
             ) : (
                 <section className="rounded-2xl border border-dashed border-[#E5D9C9] bg-white px-6 py-16 text-center">
                     <p className="text-lg font-semibold text-[#382117]">
-                        No matching items found
+                        {activeCategory === 'My Favourites'
+                            ? 'No favourites yet 🔖'
+                            : 'No matching items found'}
                     </p>
+
                     <p className="mt-2 text-sm text-[#706052]">
-                        Try another search or select a different category.
+                        {activeCategory === 'My Favourites'
+                            ? 'Bookmark products using the separate favourite button and they will appear here.'
+                            : 'Try another search or select a different category.'}
                     </p>
+
                     <button
                         type="button"
                         onClick={() => {
@@ -327,7 +593,7 @@ setAvailability(availabilityMap)
                         }}
                         className="mt-5 rounded-lg bg-[#382117] px-5 py-3 text-sm font-semibold text-white hover:bg-[#503325]"
                     >
-                        Show all items
+                        Explore Menu
                     </button>
                 </section>
             )}

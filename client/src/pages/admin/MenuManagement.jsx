@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import DataTable from '../../components/admin/DataTable.jsx'
 import './MenuManagement.css'
 
-const API_URL = 'http://localhost:5000/api/menu'
+const API_URL = 'http://localhost:5001/api/menu'
 
 const emptyForm = {
   name: '',
@@ -106,7 +106,7 @@ export default function MenuManagement() {
       setItems(list.map(normalizeItem))
     } catch (err) {
       setError(
-        `${err.message}. Check that the backend is running at localhost:5000.`
+        `${err.message}. Check that the backend is running at localhost:5001.`
       )
     } finally {
       setLoading(false)

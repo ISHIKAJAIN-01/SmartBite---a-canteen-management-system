@@ -1,9 +1,23 @@
+/**
+ * Admin Order Management Routes
+ * GET /api/admin/orders
+ * GET /api/admin/orders/:id
+ * PUT /api/admin/orders/:id  { status }
+ */
 
 const express = require('express')
 const router = express.Router()
 const db = require('../../config/db')
 
+const {
+  authenticateToken,
+  requireAdmin,
+} = require('../../../middleware/authMiddleware')
+
+router.use(authenticateToken, requireAdmin)
+
 const validStatuses = [
+  'Pending',
   'Placed',
   'Preparing',
   'Ready',
@@ -11,44 +25,126 @@ const validStatuses = [
   'Cancelled',
 ]
 
-function formatOrder(row) {
-  const date = new Date(row.created_at)
+const ACTIVE_QUEUE_STATUSES = new Set(['Pending', 'Placed', 'Preparing'])
+
+function formatOrder(row, queuePosition = null) {
+  const date = row.order_date ? new Date(row.order_date) : new Date()
 
   return {
-    id: row.order_code,
-    student: row.student_name,
-    items: row.items_summary,
-    total: Number(row.total),
+    id: row.order_id,
+    order_id: row.order_id,
+    user_id: row.user_id,
+    student: row.student_name || `User #${row.user_id}`,
+    items: row.items_summary || 'No items found',
+    total: Number(row.total_amount),
     status: row.status,
+    order_date: row.order_date,
     time: date.toLocaleTimeString('en-IN', {
       hour: '2-digit',
       minute: '2-digit',
     }),
+    estimated_prep_minutes:
+      row.estimated_prep_minutes != null
+        ? Number(row.estimated_prep_minutes)
+        : null,
+    estimated_ready_at: row.estimated_ready_at || null,
+    queue_position: queuePosition,
   }
 }
 
-function getOrderCodeNumber(code) {
-  const match = /^SB-(\d+)$/.exec(String(code || ''))
-  return match ? Number(match[1]) : null
+/**
+ * Assign FIFO queue positions to active orders only.
+ * Position 1 = earliest order_date, then order_id.
+ */
+function assignQueuePositions(rows) {
+  const active = rows
+    .filter((r) => ACTIVE_QUEUE_STATUSES.has(r.status))
+    .slice()
+    .sort((a, b) => {
+      const ta = new Date(a.order_date).getTime()
+      const tb = new Date(b.order_date).getTime()
+      if (ta !== tb) return ta - tb
+      return Number(a.order_id) - Number(b.order_id)
+    })
+
+  const positionById = new Map()
+  active.forEach((row, index) => {
+    positionById.set(Number(row.order_id), index + 1)
+  })
+  return positionById
 }
 
+// Prefer canonical table names used by student order APIs
+const orderDetailsQuery = `
+  SELECT
+    o.order_id,
+    o.user_id,
+    o.order_date,
+    o.status,
+    o.total_amount,
+    o.estimated_prep_minutes,
+    o.estimated_ready_at,
+    COALESCE(u.full_name, CONCAT('User #', o.user_id)) AS student_name,
+    GROUP_CONCAT(
+      CONCAT(COALESCE(mi.item_name, CONCAT('Item ', oi.item_id)), ' × ', oi.quantity)
+      ORDER BY oi.order_item_id
+      SEPARATOR ', '
+    ) AS items_summary
+  FROM Orders o
+  LEFT JOIN users u
+    ON o.user_id = u.user_id
+  LEFT JOIN Order_Items oi
+    ON o.order_id = oi.order_id
+  LEFT JOIN menu_items mi
+    ON oi.item_id = mi.item_id
+`
+
+// GET all orders
 router.get('/', async (req, res) => {
   try {
-    const [rows] = await db.query(
-      'SELECT * FROM orders ORDER BY created_at DESC, order_id DESC'
-    )
+    const [rows] = await db.query(`
+      ${orderDetailsQuery}
+      GROUP BY
+        o.order_id,
+        o.user_id,
+        o.order_date,
+        o.status,
+        o.total_amount,
+        o.estimated_prep_minutes,
+        o.estimated_ready_at,
+        u.full_name
+      ORDER BY o.order_date DESC, o.order_id DESC
+    `)
 
-    res.json(rows.map(formatOrder))
+    const positions = assignQueuePositions(rows)
+    res.json(
+      rows.map((row) =>
+        formatOrder(row, positions.get(Number(row.order_id)) || null)
+      )
+    )
   } catch (error) {
     console.error('Fetch orders error:', error)
-    res.status(500).json({ message: 'Could not fetch orders' })
+    res.status(500).json({ message: 'Could not fetch orders', detail: error.message })
   }
 })
 
+// GET one order
 router.get('/:id', async (req, res) => {
   try {
     const [rows] = await db.query(
-      'SELECT * FROM orders WHERE order_code = ?',
+      `
+      ${orderDetailsQuery}
+      WHERE o.order_id = ?
+      GROUP BY
+        o.order_id,
+        o.user_id,
+        o.order_date,
+        o.status,
+        o.total_amount,
+        o.estimated_prep_minutes,
+        o.estimated_ready_at,
+        u.full_name
+    `,
       [req.params.id]
     )
 
@@ -56,95 +152,36 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Order not found' })
     }
 
-    res.json(formatOrder(rows[0]))
+    // Position among active orders
+    let queuePosition = null
+    if (ACTIVE_QUEUE_STATUSES.has(rows[0].status)) {
+      const [activeRows] = await db.query(
+        `SELECT order_id, order_date, status
+         FROM Orders
+         WHERE status IN ('Pending', 'Placed', 'Preparing')
+         ORDER BY order_date ASC, order_id ASC`
+      )
+      const idx = activeRows.findIndex(
+        (r) => Number(r.order_id) === Number(rows[0].order_id)
+      )
+      if (idx >= 0) queuePosition = idx + 1
+    }
+
+    res.json(formatOrder(rows[0], queuePosition))
   } catch (error) {
     console.error('Fetch order error:', error)
     res.status(500).json({ message: 'Could not fetch order' })
   }
 })
 
-router.post('/', async (req, res) => {
-  try {
-    const { student, items, total } = req.body
-
-    if (
-      typeof student !== 'string' ||
-      !student.trim() ||
-      (typeof items !== 'string' && !Array.isArray(items)) ||
-      !items.length ||
-      !Number.isFinite(Number(total)) ||
-      Number(total) < 0
-    ) {
-      return res.status(400).json({
-        message: 'Valid student, items and total are required',
-      })
-    }
-
-    const itemsSummary = Array.isArray(items)
-      ? items.map(item =>
-          typeof item === 'string'
-            ? item
-            : `${item.name || item.item_name || 'Item'} × ${Number(item.quantity || 1)}`
-        ).join(', ')
-      : items.trim()
-
-    if (!itemsSummary) {
-      return res.status(400).json({ message: 'Order items are required' })
-    }
-
-    // Generate the next order number from the highest existing SB number.
-    const [latest] = await db.query(
-      "SELECT order_code FROM orders WHERE order_code REGEXP '^SB-[0-9]+$' ORDER BY CAST(SUBSTRING(order_code, 4) AS UNSIGNED) DESC LIMIT 1"
-    )
-
-    const nextNumber = Math.max(
-      1049,
-      (getOrderCodeNumber(latest[0]?.order_code) || 1048) + 1
-    )
-    const orderCode = `SB-${nextNumber}`
-
-    const [result] = await db.query(
-      `INSERT INTO orders
-        (order_code, student_name, items_summary, total, status)
-       VALUES (?, ?, ?, ?, ?)`,
-      [orderCode, student.trim(), itemsSummary, Number(total), 'Placed']
-    )
-
-    const [rows] = await db.query(
-      'SELECT * FROM orders WHERE order_id = ?',
-      [result.insertId]
-    )
-
-    res.status(201).json(formatOrder(rows[0]))
-  } catch (error) {
-    console.error('Create order error:', error)
-
-    if (error.code === 'ER_DUP_ENTRY') {
-      return res.status(409).json({
-        message: 'Order ID already exists. Please retry.',
-      })
-    }
-
-    res.status(500).json({ message: 'Could not create order' })
-  }
-})
-
+// PUT update status (and related timestamps when Ready / Cancelled)
 router.put('/:id', async (req, res) => {
   try {
-    const { status, student, items, total } = req.body
+    const { status, special_instructions } = req.body || {}
+    const orderId = req.params.id
 
     if (status !== undefined && !validStatuses.includes(status)) {
       return res.status(400).json({ message: 'Invalid order status' })
-    }
-
-    if (student !== undefined &&
-        (typeof student !== 'string' || !student.trim())) {
-      return res.status(400).json({ message: 'Invalid student name' })
-    }
-
-    if (total !== undefined &&
-        (!Number.isFinite(Number(total)) || Number(total) < 0)) {
-      return res.status(400).json({ message: 'Invalid order total' })
     }
 
     const updates = []
@@ -153,86 +190,71 @@ router.put('/:id', async (req, res) => {
     if (status !== undefined) {
       updates.push('status = ?')
       values.push(status)
-    }
 
-    if (student !== undefined) {
-      updates.push('student_name = ?')
-      values.push(student.trim())
-    }
-
-    if (items !== undefined) {
-      const itemsSummary = Array.isArray(items)
-        ? items.map(item =>
-            typeof item === 'string'
-              ? item
-              : `${item.name || item.item_name || 'Item'} × ${Number(item.quantity || 1)}`
-          ).join(', ')
-        : String(items).trim()
-
-      if (!itemsSummary) {
-        return res.status(400).json({ message: 'Invalid order items' })
+      if (status === 'Ready') {
+        updates.push('actual_ready_at = COALESCE(actual_ready_at, CURRENT_TIMESTAMP)')
       }
-
-      updates.push('items_summary = ?')
-      values.push(itemsSummary)
+      if (status === 'Cancelled') {
+        updates.push('cancelled_at = COALESCE(cancelled_at, CURRENT_TIMESTAMP)')
+      }
     }
 
-    if (total !== undefined) {
-      updates.push('total = ?')
-      values.push(Number(total))
+    if (special_instructions !== undefined) {
+      updates.push('special_instructions = ?')
+      values.push(special_instructions)
     }
 
-    if (!updates.length) {
+    if (updates.length === 0) {
       return res.status(400).json({ message: 'No valid fields provided' })
     }
 
-    values.push(req.params.id)
+    values.push(orderId)
 
     const [result] = await db.query(
-      `UPDATE orders SET ${updates.join(', ')} WHERE order_code = ?`,
+      `UPDATE Orders SET ${updates.join(', ')} WHERE order_id = ?`,
       values
     )
 
-    if (!result.affectedRows) {
+    if (result.affectedRows === 0) {
       return res.status(404).json({ message: 'Order not found' })
     }
 
     const [rows] = await db.query(
-      'SELECT * FROM orders WHERE order_code = ?',
-      [req.params.id]
+      `
+      ${orderDetailsQuery}
+      WHERE o.order_id = ?
+      GROUP BY
+        o.order_id,
+        o.user_id,
+        o.order_date,
+        o.status,
+        o.total_amount,
+        o.estimated_prep_minutes,
+        o.estimated_ready_at,
+        u.full_name
+    `,
+      [orderId]
     )
 
-    res.json(formatOrder(rows[0]))
+    let queuePosition = null
+    if (rows.length && ACTIVE_QUEUE_STATUSES.has(rows[0].status)) {
+      const [activeRows] = await db.query(
+        `SELECT order_id FROM Orders
+         WHERE status IN ('Pending', 'Placed', 'Preparing')
+         ORDER BY order_date ASC, order_id ASC`
+      )
+      const idx = activeRows.findIndex(
+        (r) => Number(r.order_id) === Number(orderId)
+      )
+      if (idx >= 0) queuePosition = idx + 1
+    }
+
+    res.json(formatOrder(rows[0], queuePosition))
   } catch (error) {
     console.error('Update order error:', error)
-    res.status(500).json({ message: 'Could not update order' })
-  }
-})
-
-router.delete('/:id', async (req, res) => {
-  try {
-    const [rows] = await db.query(
-      'SELECT * FROM orders WHERE order_code = ?',
-      [req.params.id]
-    )
-
-    if (!rows.length) {
-      return res.status(404).json({ message: 'Order not found' })
-    }
-
-    await db.query(
-      'DELETE FROM orders WHERE order_code = ?',
-      [req.params.id]
-    )
-
-    res.json({
-      message: 'Order deleted',
-      order: formatOrder(rows[0]),
-    })
-  } catch (error) {
-    console.error('Delete order error:', error)
-    res.status(500).json({ message: 'Could not delete order' })
+    res.status(500).json({ message: 'Could not update order', detail: error.message })
   }
 })
 
 module.exports = router
+

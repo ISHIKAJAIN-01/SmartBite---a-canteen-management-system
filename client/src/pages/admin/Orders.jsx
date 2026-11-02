@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import DataTable from '../../components/admin/DataTable.jsx'
 import './Orders.css'
 
-const API_URL = 'http://localhost:5000/api/orders'
+const API_URL = 'http://localhost:5001/api/orders'
 
 const nextStatus = {
   Placed: 'Preparing',

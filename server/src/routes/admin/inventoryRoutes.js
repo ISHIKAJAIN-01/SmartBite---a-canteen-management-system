@@ -3,6 +3,14 @@ const express = require('express')
 const router = express.Router()
 const db = require('../../config/db')
 
+const {
+  authenticateToken,
+  requireAdmin,
+} = require('../../../middleware/authMiddleware')
+
+// All inventory routes require an authenticated admin.
+router.use(authenticateToken, requireAdmin)
+
 // Frontend-compatible inventory fields
 const mapItem = (row) => ({
   id: Number(row.ingredient_id),

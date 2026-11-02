@@ -1,14 +1,17 @@
 
-import { Plus } from 'lucide-react'
+import { Plus, Heart, Bookmark } from 'lucide-react'
 
-function FoodCard({ item, onAddToCart }) {
+function FoodCard({
+  item,
+  onAddToCart,
+  onToggleLike,
+  onToggleFavourite,
+}) {
   return (
     <article className="overflow-hidden rounded-2xl border border-[#E5D9C9] bg-white transition duration-200 hover:-translate-y-1 hover:shadow-lg">
 
       {/* Food Image */}
       <div className="relative flex h-48 items-center justify-center overflow-hidden bg-[#F2E6D1]">
-
-        {/* Emoji fallback */}
         <span
           className="text-7xl"
           role="img"
@@ -17,7 +20,6 @@ function FoodCard({ item, onAddToCart }) {
           {item.emoji || '🍽️'}
         </span>
 
-        {/* Actual food photo */}
         {item.image && (
           <img
             src={item.image}
@@ -47,11 +49,61 @@ function FoodCard({ item, onAddToCart }) {
           {item.description || 'Freshly prepared at your college canteen.'}
         </p>
 
-        <div className="mt-5 flex items-center justify-between gap-3">
+        {/* Price, Like, Favourite and Add to Cart */}
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+
+          {/* Price */}
           <span className="text-xl font-bold text-[#382117]">
             ₹{item.price}
           </span>
 
+          <div className="flex items-center gap-2">
+
+            {/* Like Button */}
+            <button
+              type="button"
+              onClick={() => onToggleLike?.(item)}
+              aria-label={item.isLiked ? 'Unlike product' : 'Like product'}
+              aria-pressed={!!item.isLiked}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-2 transition ${
+                item.isLiked
+                  ? 'bg-red-50 text-red-600'
+                  : 'bg-[#F8F1E8] text-[#706052] hover:bg-red-50 hover:text-red-500'
+              }`}
+            >
+              <Heart
+                size={19}
+                fill={item.isLiked ? 'currentColor' : 'none'}
+              />
+              <span className="text-sm font-semibold">
+                {item.likeCount ?? 0}
+              </span>
+            </button>
+
+            {/* Favourite Button */}
+            <button
+              type="button"
+              onClick={() => onToggleFavourite?.(item)}
+              aria-label={
+                item.isFavourite
+                  ? 'Remove from favourites'
+                  : 'Add to favourites'
+              }
+              aria-pressed={!!item.isFavourite}
+              className={`rounded-lg p-2.5 transition ${
+                item.isFavourite
+                  ? 'bg-amber-50 text-amber-600'
+                  : 'bg-[#F8F1E8] text-[#706052] hover:bg-amber-50 hover:text-amber-600'
+              }`}
+            >
+              <Bookmark
+                size={19}
+                fill={item.isFavourite ? 'currentColor' : 'none'}
+              />
+            </button>
+          </div>
+
+          {/* Add to Cart */}
           <button
             type="button"
             onClick={() => onAddToCart(item)}

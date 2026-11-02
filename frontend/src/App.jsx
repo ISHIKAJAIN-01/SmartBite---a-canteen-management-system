@@ -1,5 +1,5 @@
 
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { CartProvider } from "./context/CartContext.jsx";
 
 import Navbar from "./components/Navbar";
@@ -17,16 +17,54 @@ import OrderConfirmation from "./pages/OrderConfirmation";
 
 import Admin from "./pages/Admin";
 
+// Protect routes based on login status and user role
+function ProtectedRoute({ allowedRole, children }) {
+  const token = localStorage.getItem("token");
+  const storedUser = localStorage.getItem("user");
+
+  let user = null;
+
+  try {
+    user = storedUser ? JSON.parse(storedUser) : null;
+  } catch {
+    user = null;
+  }
+
+  // No valid stored login information
+  if (!token || !user || !user.role) {
+    return <Navigate to="/login" replace />;
+  }
+
+  const userRole = String(user.role).toLowerCase();
+
+  // User has logged in but does not have the required role
+  if (userRole !== allowedRole.toLowerCase()) {
+    if (userRole === "admin") {
+      return <Navigate to="/admin" replace />;
+    }
+
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+}
+
 function App() {
   return (
     <CartProvider>
       <BrowserRouter>
         <Routes>
+          {/* Admin routes */}
           <Route
             path="/admin/*"
-            element={<Admin />}
+            element={
+              <ProtectedRoute allowedRole="admin">
+                <Admin />
+              </ProtectedRoute>
+            }
           />
 
+          {/* Customer-facing application */}
           <Route
             path="/*"
             element={
@@ -38,14 +76,41 @@ function App() {
                   <Route path="/menu" element={<Menu />} />
                   <Route path="/search" element={<Search />} />
                   <Route path="/cart" element={<Cart />} />
-                  <Route path="/checkout" element={<Checkout />} />
-                  <Route path="/my-orders" element={<MyOrders />} />
+
+                  {/* Student-only routes */}
+                  <Route
+                    path="/checkout"
+                    element={
+                      <ProtectedRoute allowedRole="student">
+                        <Checkout />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  <Route
+                    path="/my-orders"
+                    element={
+                      <ProtectedRoute allowedRole="student">
+                        <MyOrders />
+                      </ProtectedRoute>
+                    }
+                  />
+
                   <Route
                     path="/order-confirmation"
-                    element={<OrderConfirmation />}
+                    element={
+                      <ProtectedRoute allowedRole="student">
+                        <OrderConfirmation />
+                      </ProtectedRoute>
+                    }
                   />
+
+                  {/* Public routes */}
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
+
+                  {/* Unknown customer route */}
+                  <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
 
                 <Footer />

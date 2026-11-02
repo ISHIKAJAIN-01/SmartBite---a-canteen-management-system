@@ -4,9 +4,23 @@ import MetricCard from '../../components/admin/MetricCard.jsx'
 import DataTable from '../../components/admin/DataTable.jsx'
 import './Dashboard.css'
 
-const menuApiUrl = 'http://localhost:5000/api/menu'
-const inventoryApiUrl = 'http://localhost:5000/api/inventory'
-const ordersApiUrl = 'http://localhost:5000/api/admin/orders'
+const menuApiUrl = 'http://localhost:5001/api/menu'
+const inventoryApiUrl = 'http://localhost:5001/api/inventory'
+const ordersApiUrl = 'http://localhost:5001/api/admin/orders'
+
+// Get authentication headers for protected admin APIs
+function getAdminHeaders() {
+  const token = localStorage.getItem('token')
+
+  if (!token) {
+    window.location.href = '/login'
+    throw new Error('Admin authentication required')
+  }
+
+  return {
+    Authorization: `Bearer ${token}`,
+  }
+}
 
 const badge = status => (
   <span className={`status-badge status-${String(status).toLowerCase()}`}>
@@ -98,11 +112,21 @@ export default function Dashboard({ onNavigate }) {
 
   async function loadOrders() {
     try {
-      const response = await fetch(ordersApiUrl)
+      const response = await fetch(ordersApiUrl, {
+        headers: getAdminHeaders(),
+      })
+
+      if (response.status === 401 || response.status === 403) {
+        throw new Error('Admin authentication failed. Please log in again.')
+      }
+
       if (!response.ok) throw new Error('Orders API request failed')
 
       const data = await response.json()
-      if (!Array.isArray(data)) throw new Error('Invalid orders response')
+
+      if (!Array.isArray(data)) {
+        throw new Error('Invalid orders response')
+      }
 
       setOrders(data.map(normalizeOrder))
       setOrdersError(false)
@@ -116,12 +140,17 @@ export default function Dashboard({ onNavigate }) {
 
   async function loadMenuItems() {
     try {
+      // Menu GET is public, so no authentication header is needed.
       const response = await fetch(menuApiUrl)
+
       if (!response.ok) throw new Error('Menu API request failed')
 
       const data = await response.json()
       const items = Array.isArray(data) ? data : data.items
-      if (!Array.isArray(items)) throw new Error('Invalid menu response')
+
+      if (!Array.isArray(items)) {
+        throw new Error('Invalid menu response')
+      }
 
       setMenuItems(items)
       setMenuError(false)
@@ -135,12 +164,22 @@ export default function Dashboard({ onNavigate }) {
 
   async function loadInventory() {
     try {
-      const response = await fetch(inventoryApiUrl)
+      const response = await fetch(inventoryApiUrl, {
+        headers: getAdminHeaders(),
+      })
+
+      if (response.status === 401 || response.status === 403) {
+        throw new Error('Admin authentication failed. Please log in again.')
+      }
+
       if (!response.ok) throw new Error('Inventory API request failed')
 
       const data = await response.json()
       const items = Array.isArray(data) ? data : data.items
-      if (!Array.isArray(items)) throw new Error('Invalid inventory response')
+
+      if (!Array.isArray(items)) {
+        throw new Error('Invalid inventory response')
+      }
 
       setStock(items.map(normalizeInventoryItem))
       setStockError(false)
@@ -164,6 +203,7 @@ export default function Dashboard({ onNavigate }) {
     }
 
     window.addEventListener('focus', onFocus)
+
     return () => window.removeEventListener('focus', onFocus)
   }, [])
 
@@ -213,6 +253,7 @@ export default function Dashboard({ onNavigate }) {
           <h1>Good morning, Admin <span>✳</span></h1>
           <p>Here’s what’s happening at your canteen today.</p>
         </div>
+
         <button
           type="button"
           className="btn btn-secondary"
@@ -289,7 +330,11 @@ export default function Dashboard({ onNavigate }) {
           {ordersError ? (
             <div className="stock-alert">
               Could not load orders. Check the backend.
-              <button type="button" className="stock-link dashboard-action" onClick={loadOrders}>
+              <button
+                type="button"
+                className="stock-link dashboard-action"
+                onClick={loadOrders}
+              >
                 Retry →
               </button>
             </div>
@@ -307,6 +352,7 @@ export default function Dashboard({ onNavigate }) {
             <span>
               Showing {recentOrders.length} of {orders.length} orders
             </span>
+
             <button
               type="button"
               className="subtle-link dashboard-action"
@@ -314,6 +360,7 @@ export default function Dashboard({ onNavigate }) {
             >
               View all orders →
             </button>
+
             <button
               type="button"
               className="subtle-link dashboard-action"
@@ -366,9 +413,11 @@ export default function Dashboard({ onNavigate }) {
                     <strong>{item.name}</strong>
                     <span>{item.quantity} {item.unit}</span>
                   </div>
+
                   <div className="stock-threshold">
                     Threshold: {item.threshold} {item.unit}
                   </div>
+
                   <div className="stock-bar">
                     <span style={{ width: `${width}%` }} />
                   </div>
@@ -395,6 +444,7 @@ export default function Dashboard({ onNavigate }) {
 
       <section className="insight-banner">
         <div className="insight-icon">✦</div>
+
         <div>
           <strong>
             {stockLoading
@@ -405,6 +455,7 @@ export default function Dashboard({ onNavigate }) {
                   ? 'All stock levels look good'
                   : 'Inventory needs attention'}
           </strong>
+
           <p>
             {stockLoading
               ? 'Loading current stock levels from the database.'

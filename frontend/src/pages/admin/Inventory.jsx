@@ -22,7 +22,21 @@ const emptyForm = {
   threshold: '5',
 }
 
-const API_URL = 'http://localhost:5000/api/inventory'
+const API_URL = 'http://localhost:5001/api/inventory'
+
+function getAdminHeaders(includeJson = false) {
+  const token = localStorage.getItem('token')
+
+  if (!token) {
+    window.location.href = '/login'
+    throw new Error('Admin authentication required. Please log in.')
+  }
+
+  return {
+    Authorization: `Bearer ${token}`,
+    ...(includeJson ? { 'Content-Type': 'application/json' } : {}),
+  }
+}
 
 function getCategory(name = '') {
   const value = String(name ?? '').toLowerCase()
@@ -81,8 +95,15 @@ export default function Inventory() {
     setError('')
 
     try {
-      const response = await fetch(API_URL)
+      const response = await fetch(API_URL, {
+        headers: getAdminHeaders(),
+      })
+
       const data = await response.json()
+
+      if (response.status === 401 || response.status === 403) {
+        throw new Error('Admin session invalid. Please log in again.')
+      }
 
       if (!response.ok) {
         throw new Error(data.message || 'Could not load inventory.')
@@ -100,6 +121,7 @@ export default function Inventory() {
 
       setStock(normalized)
     } catch (err) {
+      console.error('Load inventory error:', err)
       setError(
         `${err.message}. Check the backend and /api/inventory response.`
       )
@@ -218,7 +240,7 @@ export default function Inventory() {
 
       const response = await fetch(url, {
         method: isAdd ? 'POST' : 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminHeaders(true),
         body: JSON.stringify({
           name,
           quantity,
@@ -228,6 +250,10 @@ export default function Inventory() {
       })
 
       const data = await response.json()
+
+      if (response.status === 401 || response.status === 403) {
+        throw new Error('Admin session invalid. Please log in again.')
+      }
 
       if (!response.ok) {
         throw new Error(data.message || 'Could not save ingredient.')
@@ -245,6 +271,7 @@ export default function Inventory() {
       setModal(null)
       setError('')
     } catch (err) {
+      console.error('Save ingredient error:', err)
       setError(err.message || 'Could not save ingredient.')
     } finally {
       setSaving(false)
@@ -262,9 +289,14 @@ export default function Inventory() {
     try {
       const response = await fetch(`${API_URL}/${item.id}`, {
         method: 'DELETE',
+        headers: getAdminHeaders(),
       })
 
       const data = await response.json()
+
+      if (response.status === 401 || response.status === 403) {
+        throw new Error('Admin session invalid. Please log in again.')
+      }
 
       if (!response.ok) {
         throw new Error(data.message || 'Could not delete ingredient.')
@@ -275,6 +307,7 @@ export default function Inventory() {
       setModal(null)
       setError('')
     } catch (err) {
+      console.error('Delete ingredient error:', err)
       setError(err.message || 'Could not delete ingredient.')
     } finally {
       setSaving(false)

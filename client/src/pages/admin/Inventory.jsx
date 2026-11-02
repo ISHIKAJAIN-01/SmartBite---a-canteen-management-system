@@ -22,7 +22,7 @@ const emptyForm = {
   threshold: '5',
 }
 
-const API_URL = 'http://localhost:5000/api/inventory'
+const API_URL = 'http://localhost:5001/api/inventory'
 
 function getCategory(name = '') {
   const value = String(name ?? '').toLowerCase()

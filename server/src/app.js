@@ -1,13 +1,21 @@
-
 const express = require("express");
 const cors = require("cors");
 const pool = require("./config/db");
+
 const authRouter = require("./routes/auth");
 const ordersRouter = require("./routes/orders");
 const paymentsRouter = require("./routes/payments");
+const productLikesRouter = require("./routes/productLikes");
+const favoritesRouter = require("./routes/favorites");
 const adminInventoryRouter = require("./routes/admin/inventoryRoutes");
 const adminMenuRouter = require("./routes/admin/menuRoutes");
 const adminOrdersRouter = require("./routes/admin/orderRoutes");
+const orderTrackingRouter = require("./routes/orderTrackingRoutes");
+
+const {
+  authenticateToken,
+  requireAdmin,
+} = require("../middleware/authMiddleware");
 
 const app = express();
 
@@ -36,35 +44,47 @@ app.get("/api/health", (req, res) => {
 });
 
 // Database connection test API
-app.get("/api/db-test", async (req, res) => {
-  try {
-    const [rows] = await pool.query(
-      "SELECT DATABASE() AS database_name"
-    );
+// Admin only
+app.get(
+  "/api/db-test",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const [rows] = await pool.query(
+        "SELECT DATABASE() AS database_name"
+      );
 
-    res.json({
-      status: "success",
-      message: "MySQL connected successfully!",
-      database: rows[0].database_name,
-    });
-  } catch (error) {
-    console.error("Database test failed:", error.message);
+      res.json({
+        status: "success",
+        message: "MySQL connected successfully!",
+        database: rows[0].database_name,
+      });
+    } catch (error) {
+      console.error("Database test failed:", error.message);
 
-    res.status(500).json({
-      status: "error",
-      message: "Database connection failed",
-    });
+      res.status(500).json({
+        status: "error",
+        message: "Database connection failed",
+      });
+    }
   }
-});
+);
 
-// Feature routers (must stay above the 404 handler)
+// Feature routers
 app.use("/api/orders", ordersRouter);
 app.use("/api/payments", paymentsRouter);
 app.use("/api/auth", authRouter);
-// Admin feature routers
+app.use("/api/product-likes", productLikesRouter);
+app.use("/api/favorites", favoritesRouter);
+
+// Admin and menu routers
 app.use("/api/inventory", adminInventoryRouter);
 app.use("/api/menu", adminMenuRouter);
 app.use("/api/admin/orders", adminOrdersRouter);
+
+// Order tracking & queue routes (queue position, estimates, active orders)
+app.use("/api", orderTrackingRouter);
 
 // 404 route
 app.use((req, res) => {
@@ -74,8 +94,7 @@ app.use((req, res) => {
   });
 });
 
-// Error handler (must be last, and must keep all 4 arguments).
-// Express 5 forwards errors from async route handlers here automatically.
+// Error handler
 app.use((err, req, res, next) => {
   if (res.headersSent) {
     return next(err);

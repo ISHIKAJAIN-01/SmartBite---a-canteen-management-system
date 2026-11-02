@@ -4,9 +4,9 @@ import MetricCard from '../../components/admin/MetricCard.jsx'
 import DataTable from '../../components/admin/DataTable.jsx'
 import './Dashboard.css'
 
-const menuApiUrl = 'http://localhost:5000/api/menu'
-const inventoryApiUrl = 'http://localhost:5000/api/inventory'
-const ordersApiUrl = 'http://localhost:5000/api/orders'
+const menuApiUrl = 'http://localhost:5001/api/menu'
+const inventoryApiUrl = 'http://localhost:5001/api/inventory'
+const ordersApiUrl = 'http://localhost:5001/api/orders'
 
 const badge = status => (
   <span className={`status-badge status-${String(status).toLowerCase()}`}>

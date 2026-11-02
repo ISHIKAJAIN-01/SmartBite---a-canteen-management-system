@@ -3,7 +3,21 @@ import { useEffect, useMemo, useState } from 'react'
 import DataTable from '../../components/admin/DataTable.jsx'
 import './Orders.css'
 
-const API_URL = 'http://localhost:5000/api/admin/orders'
+const API_URL = 'http://localhost:5001/api/admin/orders'
+
+function getAdminHeaders(includeJson = false) {
+  const token = localStorage.getItem('token')
+
+  if (!token) {
+    window.location.href = '/login'
+    throw new Error('Admin authentication required. Please log in.')
+  }
+
+  return {
+    Authorization: `Bearer ${token}`,
+    ...(includeJson ? { 'Content-Type': 'application/json' } : {}),
+  }
+}
 
 const nextStatus = {
   Placed: 'Preparing',
@@ -38,13 +52,25 @@ export default function Orders() {
   async function loadOrders() {
     try {
       setLoading(true)
-      const response = await fetch(API_URL)
-      if (!response.ok) throw new Error('Orders load nahi hue.')
+
+      const response = await fetch(API_URL, {
+        headers: getAdminHeaders(),
+      })
+
+      if (response.status === 401 || response.status === 403) {
+        throw new Error('Admin session invalid. Please log in again.')
+      }
+
+      if (!response.ok) {
+        throw new Error('Orders load nahi hue.')
+      }
 
       const data = await response.json()
       setOrders(Array.isArray(data) ? data : [])
+      setNotice('')
     } catch (error) {
-      setNotice('Orders load nahi hue. Backend server check karo.')
+      console.error('Load orders error:', error)
+      setNotice(error.message || 'Orders load nahi hue. Backend server check karo.')
     } finally {
       setLoading(false)
     }
@@ -68,11 +94,18 @@ export default function Orders() {
 
   async function advance(id) {
     const target = orders.find((order) => order.id === id)
-    if (!target || !nextStatus[target.status] || target.status === 'Collected' || target.status === 'Cancelled') {
+
+    if (
+      !target ||
+      !nextStatus[target.status] ||
+      target.status === 'Collected' ||
+      target.status === 'Cancelled'
+    ) {
       return
     }
 
     const status = nextStatus[target.status]
+
     setUpdatingId(id)
     setNotice('')
 
@@ -81,12 +114,17 @@ export default function Orders() {
         `${API_URL}/${encodeURIComponent(id)}`,
         {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAdminHeaders(true),
           body: JSON.stringify({ status }),
         }
       )
 
       const result = await response.json()
+
+      if (response.status === 401 || response.status === 403) {
+        throw new Error('Admin session invalid. Please log in again.')
+      }
+
       if (!response.ok) {
         throw new Error(result.message || 'Status update nahi hua.')
       }
@@ -94,8 +132,12 @@ export default function Orders() {
       setOrders((previous) =>
         previous.map((order) => (order.id === id ? result : order))
       )
-      setNotice(`${id} ka status ${status} ho gaya aur database mein save ho gaya.`)
+
+      setNotice(
+        `${id} ka status ${status} ho gaya aur database mein save ho gaya.`
+      )
     } catch (error) {
+      console.error('Update order error:', error)
       setNotice(error.message || 'Status update nahi hua. Dobara try karo.')
     } finally {
       setUpdatingId(null)
@@ -117,7 +159,9 @@ export default function Orders() {
     {
       key: 'items',
       label: 'ITEMS',
-      render: (row) => <span className="order-items">{row.items}</span>,
+      render: (row) => (
+        <span className="order-items">{row.items}</span>
+      ),
     },
     {
       key: 'total',
@@ -168,6 +212,7 @@ export default function Orders() {
           <h1>Orders</h1>
           <p>Review incoming orders and keep pickups moving smoothly.</p>
         </div>
+
         <div className="orders-total">
           <strong>{orders.length}</strong>
           <span>database orders</span>
@@ -216,7 +261,12 @@ export default function Orders() {
           <span>
             Showing {filtered.length} of {orders.length} database orders
           </span>
-          <button type="button" className="table-action" onClick={loadOrders}>
+
+          <button
+            type="button"
+            className="table-action"
+            onClick={loadOrders}
+          >
             Refresh
           </button>
         </div>

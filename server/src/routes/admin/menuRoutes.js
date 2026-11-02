@@ -3,6 +3,11 @@ const express = require('express')
 const router = express.Router()
 const db = require('../../config/db')
 
+const {
+  authenticateToken,
+  requireAdmin,
+} = require('../../../middleware/authMiddleware')
+
 // Convert database rows into the format used by the frontend
 const formatMenuItem = (row) => ({
   id: row.id,
@@ -48,7 +53,8 @@ async function findCategoryId(connection, category) {
   return result.insertId
 }
 
-// GET /api/menu - fetch all menu items
+// GET /api/menu - fetch all customer menu items
+// Public route: students and visitors can view the menu.
 router.get('/', async (req, res, next) => {
   try {
     const [rows] = await db.query(
@@ -61,6 +67,7 @@ router.get('/', async (req, res, next) => {
 })
 
 // GET /api/menu/:id - fetch one menu item
+// Public route.
 router.get('/:id', async (req, res, next) => {
   try {
     const id = Number(req.params.id)
@@ -70,7 +77,7 @@ router.get('/:id', async (req, res, next) => {
     }
 
     const [rows] = await db.execute(
-      `${getMenuQuery} WHERE m.item_id = ?`,
+      `${getMenuQuery} WHERE m.item_id = ? AND m.is_customer_menu_item = 1`,
       [id]
     )
 
@@ -85,7 +92,8 @@ router.get('/:id', async (req, res, next) => {
 })
 
 // POST /api/menu - create a menu item
-router.post('/', async (req, res, next) => {
+// Admin only.
+router.post('/', authenticateToken, requireAdmin, async (req, res, next) => {
   const {
     name,
     category,
@@ -161,7 +169,8 @@ router.post('/', async (req, res, next) => {
 })
 
 // PUT /api/menu/:id - update a menu item
-router.put('/:id', async (req, res, next) => {
+// Admin only.
+router.put('/:id', authenticateToken, requireAdmin, async (req, res, next) => {
   const id = Number(req.params.id)
   const {
     name,
@@ -273,7 +282,8 @@ router.put('/:id', async (req, res, next) => {
 })
 
 // DELETE /api/menu/:id - delete a menu item
-router.delete('/:id', async (req, res, next) => {
+// Admin only.
+router.delete('/:id', authenticateToken, requireAdmin, async (req, res, next) => {
   try {
     const id = Number(req.params.id)
 

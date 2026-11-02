@@ -1,16 +1,24 @@
+
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 function Register() {
+  const navigate = useNavigate()
+
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
 
-    const formData = new FormData(event.currentTarget)
+    const form = event.currentTarget
+    const formData = new FormData(form)
+
+    const name = formData.get('name')
+    const email = formData.get('email')
     const password = formData.get('password')
     const confirmPassword = formData.get('confirmPassword')
 
@@ -22,13 +30,44 @@ function Register() {
       return
     }
 
-    setMessage(
-      'Form validated successfully! Account creation will be available after backend integration.'
-    )
+    try {
+      setLoading(true)
 
-    event.currentTarget.reset()
-    setShowPassword(false)
-    setShowConfirmPassword(false)
+      const response = await fetch(
+        'http://localhost:5001/api/auth/register',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name,
+            email,
+            password,
+          }),
+        }
+      )
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Registration failed')
+      }
+
+      setMessage('Account created successfully! Redirecting to login...')
+
+      form.reset()
+      setShowPassword(false)
+      setShowConfirmPassword(false)
+
+      setTimeout(() => {
+        navigate('/login')
+      }, 1200)
+    } catch (error) {
+      setError(error.message || 'Something went wrong')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -180,9 +219,10 @@ function Register() {
 
           <button
             type="submit"
-            className="w-full rounded-lg bg-[#382117] px-4 py-3 font-semibold text-white transition hover:bg-[#503325] focus:outline-none focus:ring-2 focus:ring-[#968575] focus:ring-offset-2"
+            disabled={loading}
+            className="w-full rounded-lg bg-[#382117] px-4 py-3 font-semibold text-white transition hover:bg-[#503325] disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-[#968575] focus:ring-offset-2"
           >
-            Create account
+            {loading ? 'Creating account...' : 'Create account'}
           </button>
         </form>
 

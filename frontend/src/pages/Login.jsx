@@ -1,14 +1,14 @@
 
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { UserRound, ShieldCheck, Plus } from 'lucide-react'
+import { UserRound, ShieldCheck } from 'lucide-react'
 
 function Login() {
   const navigate = useNavigate()
 
-   const [email, setEmail] = useState('')
-   const [password, setPassword] = useState('')
-   const [adminCode, setAdminCode] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [adminCode, setAdminCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [loginType, setLoginType] = useState('customer')
   const [showPassword, setShowPassword] = useState(false)
@@ -18,20 +18,25 @@ function Login() {
     event.preventDefault()
     setMessage('')
 
-    if (loginType !== 'admin') {
-      setMessage('Customer login is not connected yet.')
-      return
-    }
-
     try {
       setLoading(true)
 
-      const response = await fetch('http://localhost:5000/api/auth/admin-login', {
+      const endpoint =
+        loginType === 'admin'
+          ? 'http://localhost:5001/api/auth/admin-login'
+          : 'http://localhost:5001/api/auth/login'
+
+      const body =
+        loginType === 'admin'
+          ? { email, password, adminCode }
+          : { email, password }
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password, adminCode }),
+        body: JSON.stringify(body),
       })
 
       const data = await response.json()
@@ -40,27 +45,39 @@ function Login() {
         throw new Error(data.message || 'Login failed')
       }
 
+      if (!data.token || !data.user) {
+        throw new Error('Login response is missing token or user details.')
+      }
+
       localStorage.setItem('token', data.token)
       localStorage.setItem('user', JSON.stringify(data.user))
-  
-      navigate('/admin')
+
+      // Notify Navbar and other components about login
+      window.dispatchEvent(new Event('authChanged'))
+
+      if (loginType === 'admin') {
+        navigate('/admin')
+      } else {
+        navigate('/')
+      }
     } catch (error) {
-      setMessage(error.message)
+      setMessage(error.message || 'Something went wrong')
     } finally {
       setLoading(false)
     }
   }
 
-    function handleLoginType(type) {
-      setLoginType(type)
-      setMessage('')
-    }
+  function handleLoginType(type) {
+    setLoginType(type)
+    setMessage('')
+    setPassword('')
+    setAdminCode('')
+  }
 
   return (
     <main className="flex min-h-[60vh] flex-1 items-center justify-center px-6 py-16">
       <section className="w-full max-w-md rounded-2xl border border-[#E5D9C9] bg-white p-8 shadow-sm">
 
-        {/* Header */}
         <div className="mb-6 text-center">
           <p className="mb-2 text-sm font-semibold uppercase tracking-widest text-[#968575]">
             SmartBite
@@ -75,15 +92,15 @@ function Login() {
           </p>
         </div>
 
-        {/* Login type selection */}
         <div className="mb-6 grid grid-cols-2 gap-3">
           <button
             type="button"
             onClick={() => handleLoginType('customer')}
-            className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-semibold transition ${loginType === 'customer'
+            className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-semibold transition ${
+              loginType === 'customer'
                 ? 'border-[#382117] bg-[#382117] text-white'
                 : 'border-[#E5D9C9] bg-white text-[#706052] hover:bg-[#F8F1E8]'
-              }`}
+            }`}
           >
             <UserRound size={17} />
             Customer
@@ -92,26 +109,26 @@ function Login() {
           <button
             type="button"
             onClick={() => handleLoginType('admin')}
-            className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-semibold transition ${loginType === 'admin'
+            className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-semibold transition ${
+              loginType === 'admin'
                 ? 'border-[#382117] bg-[#382117] text-white'
                 : 'border-[#E5D9C9] bg-white text-[#706052] hover:bg-[#F8F1E8]'
-              }`}
+            }`}
           >
             <ShieldCheck size={17} />
             Admin
           </button>
         </div>
 
-        {/* Login form */}
         <form className="space-y-5" onSubmit={handleSubmit}>
-
-          {/* Email */}
           <div>
             <label
               htmlFor="email"
               className="mb-2 block text-sm font-medium text-[#382117]"
             >
-              {loginType === 'admin' ? 'Admin email address' : 'College email address'}
+              {loginType === 'admin'
+                ? 'Admin email address'
+                : 'College email address'}
             </label>
 
             <input
@@ -127,7 +144,6 @@ function Login() {
             />
           </div>
 
-          {/* Password */}
           <div>
             <label
               htmlFor="password"
@@ -160,7 +176,6 @@ function Login() {
             </div>
           </div>
 
-          {/* Admin access code */}
           {loginType === 'admin' && (
             <div>
               <label
@@ -188,29 +203,28 @@ function Login() {
             </div>
           )}
 
-          {/* Message */}
           {message && (
             <p
-              role="status"
+              role="alert"
               className="rounded-lg bg-[#F2E6D1] p-3 text-sm leading-5 text-[#382117]"
             >
               {message}
             </p>
           )}
 
-          {/* Submit */}
           <button
             type="submit"
-            className="w-full rounded-lg bg-[#382117] px-4 py-3 font-semibold text-white transition hover:bg-[#503325] focus:outline-none focus:ring-2 focus:ring-[#968575] focus:ring-offset-2"
-           >{loading
-             ? 'Signing in...'
-             : loginType === 'admin'
-             ? 'Admin Sign In'
-             : 'Customer Sign In'}
+            disabled={loading}
+            className="w-full rounded-lg bg-[#382117] px-4 py-3 font-semibold text-white transition hover:bg-[#503325] disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-[#968575] focus:ring-offset-2"
+          >
+            {loading
+              ? 'Signing in...'
+              : loginType === 'admin'
+                ? 'Admin Sign In'
+                : 'Customer Sign In'}
           </button>
-          </form>
+        </form>
 
-        {/* Register link - customers only */}
         {loginType === 'customer' && (
           <p className="mt-6 text-center text-sm text-[#706052]">
             New to SmartBite?{' '}

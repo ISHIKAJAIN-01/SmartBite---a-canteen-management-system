@@ -237,3 +237,70 @@
     flex-direction: column;
   }
 }
+/* Order tracking section */
+.my-order-tracking {
+  margin-top: 18px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: #faf6f1;
+  border: 1px solid #eadfd3;
+}
+
+.my-order-tracking-ready {
+  background: #eef8f0;
+  border-color: #c5e3cc;
+}
+
+.my-order-tracking-title {
+  margin: 0 0 12px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: #968575;
+}
+
+.my-order-tracking-refreshing {
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: #b0a090;
+}
+
+.my-order-tracking-ready-banner {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #2f6b3a;
+}
+
+.my-order-tracking-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px 18px;
+}
+
+.my-order-tracking-grid span {
+  display: block;
+  font-size: 12px;
+  color: #968575;
+  margin-bottom: 4px;
+}
+
+.my-order-tracking-grid strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: #30231d;
+}
+
+.my-order-tracking-message {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: #6b5c50;
+}
+
+@media (max-width: 640px) {
+  .my-order-tracking-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

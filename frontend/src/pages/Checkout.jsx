@@ -4,10 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext.jsx";
 import "./Checkout.css";
 
-const API_BASE = "http://localhost:5000/api";
-
-// Temporary testing ID. Use an ID that exists in your Users table.
-const TEST_USER_ID = 1;
+const API_BASE = "http://localhost:5001/api";
 
 const money = (amount) =>
   new Intl.NumberFormat("en-IN", {
@@ -70,10 +67,20 @@ function Checkout() {
       return;
     }
 
+    // Get the logged-in student's token.
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      setError("Please log in before placing an order.");
+      navigate("/login");
+      return;
+    }
+
     const orderItems = items.map((item) => ({
-       item_id: Number(item.item_id),
-       quantity: Number(item.quantity),
+      item_id: Number(item.item_id),
+      quantity: Number(item.quantity),
     }));
+
     if (
       orderItems.some(
         (item) =>
@@ -90,14 +97,17 @@ function Checkout() {
     setLoading(true);
 
     try {
-      // 1. Create the order.
+      // 1. Create order using authenticated student's token.
       const orderResponse = await fetch(`${API_BASE}/orders`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
-          user_id: TEST_USER_ID,
           cart_type: cartType,
           items: orderItems,
+          special_instructions: instructions.trim(),
         }),
       });
 
@@ -129,10 +139,13 @@ function Checkout() {
         JSON.stringify(orderDetails)
       );
 
-      // 2. Process normal simulated payment.
+      // 2. Process simulated payment using the same token.
       const paymentResponse = await fetch(`${API_BASE}/payments`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           order_id: order.order_id,
           payment_method: paymentMethod,
@@ -164,7 +177,7 @@ function Checkout() {
         })
       );
 
-      // 4. Clear the selected cart after successful payment.
+      // 4. Clear cart after successful payment.
       clearCart(cartType);
 
       sessionStorage.removeItem("smartbite-cart");
