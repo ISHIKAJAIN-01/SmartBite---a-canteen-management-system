@@ -1,7 +1,7 @@
 
 const express = require('express')
 const router = express.Router()
-const db = require('../db')
+const db = require('../../config/db')
 
 // Convert database rows into the format used by the frontend
 const formatMenuItem = (row) => ({
@@ -52,7 +52,7 @@ async function findCategoryId(connection, category) {
 router.get('/', async (req, res, next) => {
   try {
     const [rows] = await db.query(
-      `${getMenuQuery} ORDER BY m.item_id DESC`
+      `${getMenuQuery} WHERE m.is_customer_menu_item = 1 ORDER BY m.item_id DESC`
     )
     res.json(rows.map(formatMenuItem))
   } catch (error) {
@@ -130,9 +130,9 @@ router.post('/', async (req, res, next) => {
 
     const [result] = await connection.execute(
       `INSERT INTO menu_items
-        (category_id, item_name, description, price, food_type,
-         is_vegetarian, is_available)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+         (category_id, item_name, description, price, food_type,
+          is_vegetarian, is_available, is_customer_menu_item)
+          VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
       [
         categoryId,
         name.trim(),
@@ -147,7 +147,7 @@ router.post('/', async (req, res, next) => {
     await connection.commit()
 
     const [rows] = await db.execute(
-      `${getMenuQuery} WHERE m.item_id = ?`,
+      `${getMenuQuery} WHERE m.is_customer_menu_item = 1 AND m.item_id = ?`,
       [result.insertId]
     )
 
@@ -211,7 +211,7 @@ router.put('/:id', async (req, res, next) => {
     await connection.beginTransaction()
 
     const [existing] = await connection.execute(
-      'SELECT * FROM menu_items WHERE item_id = ? FOR UPDATE',
+      'SELECT * FROM menu_items WHERE item_id = ? AND is_customer_menu_item = 1 FOR UPDATE',
       [id]
     )
 
@@ -259,7 +259,7 @@ router.put('/:id', async (req, res, next) => {
     await connection.commit()
 
     const [rows] = await db.execute(
-      `${getMenuQuery} WHERE m.item_id = ?`,
+      `${getMenuQuery} WHERE m.is_customer_menu_item = 1 AND m.item_id = ?`,
       [id]
     )
 
@@ -282,7 +282,7 @@ router.delete('/:id', async (req, res, next) => {
     }
 
     const [result] = await db.execute(
-      'DELETE FROM menu_items WHERE item_id = ?',
+      'DELETE FROM menu_items WHERE item_id = ? AND is_customer_menu_item = 1',
       [id]
     )
 

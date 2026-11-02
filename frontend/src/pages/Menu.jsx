@@ -1,6 +1,7 @@
 import { useCart } from '../context/CartContext.jsx'
 import { useLocation } from 'react-router-dom'
 import { useMemo, useState } from 'react'
+import { useEffect } from 'react'
 import { Search } from 'lucide-react'
 import FoodCard from '../components/FoodCard'
 
@@ -129,6 +130,37 @@ const menuItems = [
 
 function Menu() {
     const [activeCategory, setActiveCategory] = useState('All')
+    const [availability, setAvailability] = useState({})
+    const [databaseItemIds, setDatabaseItemIds] = useState({})
+    useEffect(() => {
+    async function fetchAvailability() {
+        try {
+            const response = await fetch('http://localhost:5000/api/menu')
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch menu availability')
+            }
+
+            const items = await response.json()
+
+            const availabilityMap = {}
+            const itemIdMap = {}
+
+           items.forEach((item) => {
+             availabilityMap[item.name] = Boolean(item.available)
+             itemIdMap[item.name] = item.id
+            })
+
+setDatabaseItemIds(itemIdMap)
+setAvailability(availabilityMap)
+        } catch (error) {
+            console.error('Error fetching menu availability:', error)
+        }
+    }
+
+    fetchAvailability()
+}, [])
+    
     const location = useLocation()
     const [searchTerm, setSearchTerm] = useState(
         location.state?.searchTerm || ''
@@ -144,26 +176,40 @@ function Menu() {
         const query = searchTerm.trim().toLowerCase()
 
         return menuItems.filter((item) => {
-            const matchesCategory =
-                activeCategory === 'All' || item.category === activeCategory
+         const matchesCategory =
+          activeCategory === 'All' || item.category === activeCategory
 
-            const matchesSearch = item.name.toLowerCase().includes(query)
+          const matchesSearch = item.name.toLowerCase().includes(query)
 
-            return matchesCategory && matchesSearch
+          const hasAvailabilityData = Object.keys(availability).length > 0
+          const isAvailable =
+           !hasAvailabilityData || availability[item.name] === true
+
+         return isAvailable && matchesCategory && matchesSearch
         })
-    }, [activeCategory, searchTerm])
+   }, [activeCategory, searchTerm, availability])
 
 
 
     function handleAddToCart(item) {
-        console.log('Adding item:', item)
-        addToCart(item)
-        setNotice(
-            item.preparationType === 'readyToServe'
-                ? `${item.name} added to your Ready to Serve cart.`
-                : `${item.name} added to your Will Be Prepared cart.`
-        )
-    }
+      const databaseId = databaseItemIds[item.name]
+
+      if (!databaseId) {
+         setNotice('Menu data is still loading. Please try again.')
+         return
+       }
+
+      addToCart({
+          ...item,
+          item_id: databaseId,
+       })
+
+      setNotice(
+          item.preparationType === 'readyToServe'
+              ? `${item.name} added to your Ready to Serve cart.`
+              : `${item.name} added to your Will Be Prepared cart.`
+      )
+  }
 
 
 

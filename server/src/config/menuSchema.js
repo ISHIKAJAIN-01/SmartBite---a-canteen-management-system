@@ -19,7 +19,7 @@
 // Names are used as SQL identifiers, so only letters, digits and "_" are allowed.
 
 module.exports = {
-  table: "Menu_Items",
+  table: "menu_Items",
   idColumn: "item_id",
   priceColumn: "price",
 };

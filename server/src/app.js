@@ -2,15 +2,19 @@
 const express = require("express");
 const cors = require("cors");
 const pool = require("./config/db");
+const authRouter = require("./routes/auth");
 const ordersRouter = require("./routes/orders");
 const paymentsRouter = require("./routes/payments");
+const adminInventoryRouter = require("./routes/admin/inventoryRoutes");
+const adminMenuRouter = require("./routes/admin/menuRoutes");
+const adminOrdersRouter = require("./routes/admin/orderRoutes");
 
 const app = express();
 
 // Middleware
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: process.env.FRONTEND_URL || "http://localhost:5174",
   })
 );
 
@@ -56,6 +60,11 @@ app.get("/api/db-test", async (req, res) => {
 // Feature routers (must stay above the 404 handler)
 app.use("/api/orders", ordersRouter);
 app.use("/api/payments", paymentsRouter);
+app.use("/api/auth", authRouter);
+// Admin feature routers
+app.use("/api/inventory", adminInventoryRouter);
+app.use("/api/menu", adminMenuRouter);
+app.use("/api/admin/orders", adminOrdersRouter);
 
 // 404 route
 app.use((req, res) => {

@@ -1,6 +1,5 @@
 
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-
 import { CartProvider } from "./context/CartContext.jsx";
 
 import Navbar from "./components/Navbar";
@@ -16,30 +15,44 @@ import Checkout from "./pages/Checkout";
 import MyOrders from "./pages/MyOrders";
 import OrderConfirmation from "./pages/OrderConfirmation";
 
+import Admin from "./pages/Admin";
+
 function App() {
   return (
     <CartProvider>
       <BrowserRouter>
-        <div className="flex min-h-screen flex-col bg-[#F8F1E8]">
-          <Navbar />
+        <Routes>
+          <Route
+            path="/admin/*"
+            element={<Admin />}
+          />
 
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/menu" element={<Menu />} />
-            <Route path="/search" element={<Search />} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/my-orders" element={<MyOrders />} />
-            <Route
-              path="/order-confirmation"
-              element={<OrderConfirmation />}
-            />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-          </Routes>
+          <Route
+            path="/*"
+            element={
+              <div className="flex min-h-screen flex-col bg-[#F8F1E8]">
+                <Navbar />
 
-          <Footer />
-        </div>
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/menu" element={<Menu />} />
+                  <Route path="/search" element={<Search />} />
+                  <Route path="/cart" element={<Cart />} />
+                  <Route path="/checkout" element={<Checkout />} />
+                  <Route path="/my-orders" element={<MyOrders />} />
+                  <Route
+                    path="/order-confirmation"
+                    element={<OrderConfirmation />}
+                  />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                </Routes>
+
+                <Footer />
+              </div>
+            }
+          />
+        </Routes>
       </BrowserRouter>
     </CartProvider>
   );

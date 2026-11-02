@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext.jsx";
 import "./Checkout.css";
 
-const API_BASE = "http://localhost:5001/api";
+const API_BASE = "http://localhost:5000/api";
 
 // Temporary testing ID. Use an ID that exists in your Users table.
 const TEST_USER_ID = 1;
@@ -71,10 +71,9 @@ function Checkout() {
     }
 
     const orderItems = items.map((item) => ({
-      item_id: Number(item.item_id ?? item.id),
-      quantity: Number(item.quantity),
+       item_id: Number(item.item_id),
+       quantity: Number(item.quantity),
     }));
-
     if (
       orderItems.some(
         (item) =>

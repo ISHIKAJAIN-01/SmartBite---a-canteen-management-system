@@ -7,7 +7,7 @@ const router = express.Router();
 
 const ORDER_STATUS_PENDING = "Pending";
 const ORDER_STATUS_CANCELLED = "Cancelled";
-const MENU_DATABASE = "smartbite";
+const MENU_DATABASE = "smartbite_db";
 
 const CART_TYPES = {
   MEALS_DRINKS: "meals_drinks",
@@ -160,10 +160,10 @@ function menuLookupSql(config, count) {
       m.\`${config.priceColumn}\` AS unit_price,
       c.category_name AS category
     FROM \`${MENU_DATABASE}\`.\`${config.table}\` m
-    JOIN \`${MENU_DATABASE}\`.Categories c
+    JOIN \`${MENU_DATABASE}\`.categories c
       ON c.category_id = m.category_id
     WHERE m.\`${config.idColumn}\` IN (${placeholders})
-      AND m.available = TRUE
+      AND m.is_available = TRUE
   `;
 }
 
