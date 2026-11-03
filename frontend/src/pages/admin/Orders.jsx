@@ -20,6 +20,7 @@ function getAdminHeaders(includeJson = false) {
 }
 
 const nextStatus = {
+  Pending: 'Preparing',
   Placed: 'Preparing',
   Preparing: 'Ready',
   Ready: 'Collected',
@@ -42,6 +43,7 @@ export default function Orders() {
 
   const statuses = [
     'All',
+    'Pending',
     'Placed',
     'Preparing',
     'Ready',
