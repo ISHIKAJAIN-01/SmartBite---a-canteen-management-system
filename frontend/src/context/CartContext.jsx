@@ -15,6 +15,7 @@ function loadCart(key) {
   try {
     const savedCart = sessionStorage.getItem(key);
     const parsedCart = savedCart ? JSON.parse(savedCart) : [];
+
     return Array.isArray(parsedCart) ? parsedCart : [];
   } catch {
     return [];
@@ -46,8 +47,14 @@ export function CartProvider({ children }) {
     );
   }, [readyToServeCart]);
 
+  // Add item to the correct cart.
   function addToCart(item) {
-    const isReadyToServe = item.preparationType === "readyToServe";
+    const category = item.category?.toLowerCase();
+
+    const isReadyToServe =
+      item.preparationType === "readyToServe" ||
+      category === "desserts" ||
+      category === "snacks";
 
     const setCart = isReadyToServe
       ? setReadyToServeCart
@@ -80,6 +87,7 @@ export function CartProvider({ children }) {
     });
   }
 
+  // Remove item from the selected cart.
   function removeFromCart(itemId, cartType) {
     const setCart =
       cartType === "readyToServe"
@@ -91,6 +99,7 @@ export function CartProvider({ children }) {
     );
   }
 
+  // Update quantity in the selected cart.
   function updateQuantity(itemId, quantity, cartType) {
     if (quantity <= 0) {
       removeFromCart(itemId, cartType);
@@ -113,7 +122,10 @@ export function CartProvider({ children }) {
 
   // Clear only the cart that was successfully checked out.
   function clearCart(cartType) {
-    if (cartType === "snacks_desserts" || cartType === "readyToServe") {
+    if (
+      cartType === "snacks_desserts" ||
+      cartType === "readyToServe"
+    ) {
       setReadyToServeCart([]);
     } else {
       setPreparedCart([]);

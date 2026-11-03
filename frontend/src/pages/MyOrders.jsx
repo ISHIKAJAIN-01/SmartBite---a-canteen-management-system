@@ -1,10 +1,10 @@
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./MyOrders.css";
 
 const API_BASE = "http://localhost:5001/api";
 
-/** Statuses that may still have meaningful queue / wait estimates */
 const QUEUE_ELIGIBLE_STATUSES = new Set([
   "pending",
   "placed",
@@ -26,8 +26,11 @@ const money = (amount) =>
 
 function formatReadyTime(isoOrDate) {
   if (!isoOrDate) return null;
+
   const d = new Date(isoOrDate);
+
   if (Number.isNaN(d.getTime())) return null;
+
   return d.toLocaleTimeString("en-IN", {
     hour: "2-digit",
     minute: "2-digit",
@@ -36,8 +39,11 @@ function formatReadyTime(isoOrDate) {
 
 function queuePositionLabel(position, ordersAhead) {
   if (position == null || Number.isNaN(Number(position))) return null;
+
   const pos = Number(position);
+
   if (pos <= 0) return null;
+
   const suffix =
     pos % 10 === 1 && pos % 100 !== 11
       ? "st"
@@ -46,12 +52,22 @@ function queuePositionLabel(position, ordersAhead) {
         : pos % 10 === 3 && pos % 100 !== 13
           ? "rd"
           : "th";
+
   if (typeof ordersAhead === "number" && ordersAhead >= 0) {
-    if (ordersAhead === 0) return `${pos}${suffix} in queue (no orders ahead)`;
-    if (ordersAhead === 1) return `${pos}${suffix} in queue (1 order ahead)`;
+    if (ordersAhead === 0)
+      return `${pos}${suffix} in queue (no orders ahead)`;
+
+    if (ordersAhead === 1)
+      return `${pos}${suffix} in queue (1 order ahead)`;
+
     return `${pos}${suffix} in queue (${ordersAhead} orders ahead)`;
   }
+
   return `${pos}${suffix} in queue`;
+}
+
+function isReadyToServeOrder(order) {
+  return order.cart_type === "snacks_desserts";
 }
 
 function MyOrders() {
@@ -68,15 +84,45 @@ function MyOrders() {
   const pollTimerRef = useRef(null);
 
   const enrichOrdersWithQueue = useCallback(async (orderList, token) => {
-    if (!Array.isArray(orderList) || orderList.length === 0) return orderList;
+    if (!Array.isArray(orderList) || orderList.length === 0) {
+      return orderList;
+    }
 
     const fetchId = ++queueFetchIdRef.current;
-    setQueueLoading(true);
+
+    const ordersNeedingQueue = orderList.filter(
+      (order) =>
+        !isReadyToServeOrder(order) &&
+        !TERMINAL_STATUSES.has(String(order.status || "").toLowerCase()) &&
+        (QUEUE_ELIGIBLE_STATUSES.has(
+          String(order.status || "").toLowerCase()
+        ) ||
+          String(order.status || "").toLowerCase() === "ready")
+    );
+
+    setQueueLoading(ordersNeedingQueue.length > 0);
 
     const enriched = await Promise.all(
       orderList.map(async (order) => {
         const orderId = order.order_id ?? order.id;
         const statusKey = String(order.status || "").toLowerCase();
+
+        // Snacks and desserts are already ready to serve.
+        // Never request a preparation estimate for these orders.
+        if (isReadyToServeOrder(order)) {
+          return {
+            ...order,
+            queue_position: null,
+            estimated_prep_minutes: 0,
+            estimated_ready_at: null,
+            remaining_minutes: null,
+            orders_ahead: null,
+            queue_message: "Snacks & Desserts are ready to serve.",
+            estimate_available: true,
+            estimate_is_guaranteed: true,
+            queue_error: null,
+          };
+        }
 
         if (TERMINAL_STATUSES.has(statusKey) || !orderId) {
           return {
@@ -98,8 +144,10 @@ function MyOrders() {
           return {
             ...order,
             queue_position: null,
-            estimated_prep_minutes: order.estimated_prep_minutes ?? null,
-            estimated_ready_at: order.estimated_ready_at ?? null,
+            estimated_prep_minutes:
+              order.estimated_prep_minutes ?? null,
+            estimated_ready_at:
+              order.estimated_ready_at ?? null,
             remaining_minutes: null,
             queue_message: null,
             estimate_available: false,
@@ -118,7 +166,9 @@ function MyOrders() {
           );
 
           if (response.status === 401) {
-            throw Object.assign(new Error("Unauthorized"), { status: 401 });
+            throw Object.assign(new Error("Unauthorized"), {
+              status: 401,
+            });
           }
 
           if (!response.ok) {
@@ -142,20 +192,28 @@ function MyOrders() {
               queueData.estimated_prep_minutes != null
                 ? queueData.estimated_prep_minutes
                 : null,
-            estimated_ready_at: queueData.estimated_ready_at || null,
+            estimated_ready_at:
+              queueData.estimated_ready_at || null,
             remaining_minutes:
               queueData.remaining_minutes != null
                 ? queueData.remaining_minutes
                 : null,
             orders_ahead:
-              queueData.orders_ahead != null ? queueData.orders_ahead : null,
+              queueData.orders_ahead != null
+                ? queueData.orders_ahead
+                : null,
             queue_message: queueData.message || null,
-            estimate_available: Boolean(queueData.estimate_available),
-            estimate_is_guaranteed: Boolean(queueData.estimate_is_guaranteed),
+            estimate_available: Boolean(
+              queueData.estimate_available
+            ),
+            estimate_is_guaranteed: Boolean(
+              queueData.estimate_is_guaranteed
+            ),
             queue_error: null,
           };
         } catch (err) {
           if (err && err.status === 401) throw err;
+
           return {
             ...order,
             queue_error: "Preparation estimate unavailable",
@@ -170,6 +228,7 @@ function MyOrders() {
     }
 
     setQueueLoading(false);
+
     return enriched;
   }, []);
 
@@ -216,6 +275,7 @@ function MyOrders() {
 
       try {
         const enriched = await enrichOrdersWithQueue(list, token);
+
         if (enriched) {
           setOrders(enriched);
         }
@@ -226,6 +286,7 @@ function MyOrders() {
           navigate("/login");
           return;
         }
+
         setQueueLoading(false);
       }
     } catch (err) {
@@ -233,6 +294,7 @@ function MyOrders() {
         err.message ||
           "Unable to load orders. Check that the backend is running."
       );
+
       setLoading(false);
       setQueueLoading(false);
     }
@@ -243,12 +305,18 @@ function MyOrders() {
 
     pollTimerRef.current = setInterval(() => {
       const token = localStorage.getItem("token");
+
       if (!token) return;
 
       setOrders((current) => {
-        const hasActive = current.some((o) =>
-          QUEUE_ELIGIBLE_STATUSES.has(String(o.status || "").toLowerCase())
+        const hasActive = current.some(
+          (order) =>
+            !isReadyToServeOrder(order) &&
+            QUEUE_ELIGIBLE_STATUSES.has(
+              String(order.status || "").toLowerCase()
+            )
         );
+
         if (!hasActive) return current;
 
         enrichOrdersWithQueue(current, token)
@@ -266,6 +334,7 @@ function MyOrders() {
         clearInterval(pollTimerRef.current);
         pollTimerRef.current = null;
       }
+
       queueFetchIdRef.current += 1;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -303,16 +372,19 @@ function MyOrders() {
     setMessage("");
 
     try {
-      const response = await fetch(`${API_BASE}/orders/${orderId}/cancel`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          reason: "Cancelled by customer",
-        }),
-      });
+      const response = await fetch(
+        `${API_BASE}/orders/${orderId}/cancel`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            reason: "Cancelled by customer",
+          }),
+        }
+      );
 
       const data = await response.json();
 
@@ -328,6 +400,7 @@ function MyOrders() {
       }
 
       setMessage(`Order #${orderId} cancelled successfully.`);
+
       await fetchOrders();
     } catch (err) {
       setError(err.message || "Unable to cancel the order.");
@@ -342,15 +415,56 @@ function MyOrders() {
     const isReady = statusKey === "ready";
     const isActive = QUEUE_ELIGIBLE_STATUSES.has(statusKey);
 
-    if (isTerminal) {
+    // Ready-to-serve cart: no preparation queue or wait estimate.
+    if (isReadyToServeOrder(order)) {
       return (
-        <div className="my-order-tracking">
+        <div className="my-order-tracking my-order-tracking-ready">
           <p className="my-order-tracking-title">Order Tracking</p>
+
+          <p className="my-order-tracking-ready-banner">
+            Snacks & Desserts — Ready to Serve
+          </p>
+
           <div className="my-order-tracking-grid">
             <div>
               <span>Status</span>
               <strong>{order.status || "—"}</strong>
             </div>
+
+            <div>
+              <span>Queue</span>
+              <strong>Not applicable</strong>
+            </div>
+
+            <div>
+              <span>Estimated Preparation</span>
+              <strong>0 minutes</strong>
+            </div>
+
+            <div>
+              <span>Expected Ready Time</span>
+              <strong>Ready to serve</strong>
+            </div>
+          </div>
+
+          <p className="my-order-tracking-message">
+            These items do not require preparation time.
+          </p>
+        </div>
+      );
+    }
+
+    if (isTerminal) {
+      return (
+        <div className="my-order-tracking">
+          <p className="my-order-tracking-title">Order Tracking</p>
+
+          <div className="my-order-tracking-grid">
+            <div>
+              <span>Status</span>
+              <strong>{order.status || "—"}</strong>
+            </div>
+
             <div>
               <span>Queue</span>
               <strong>
@@ -360,8 +474,11 @@ function MyOrders() {
               </strong>
             </div>
           </div>
+
           {order.queue_message && (
-            <p className="my-order-tracking-message">{order.queue_message}</p>
+            <p className="my-order-tracking-message">
+              {order.queue_message}
+            </p>
           )}
         </div>
       );
@@ -369,17 +486,21 @@ function MyOrders() {
 
     if (isReady) {
       const readyLabel = formatReadyTime(order.estimated_ready_at);
+
       return (
         <div className="my-order-tracking my-order-tracking-ready">
           <p className="my-order-tracking-title">Order Tracking</p>
+
           <p className="my-order-tracking-ready-banner">
             Your order is ready for pickup
           </p>
+
           <div className="my-order-tracking-grid">
             <div>
               <span>Status</span>
               <strong>{order.status || "Ready"}</strong>
             </div>
+
             {readyLabel && (
               <div>
                 <span>Ready since</span>
@@ -387,8 +508,11 @@ function MyOrders() {
               </div>
             )}
           </div>
+
           {order.queue_message && (
-            <p className="my-order-tracking-message">{order.queue_message}</p>
+            <p className="my-order-tracking-message">
+              {order.queue_message}
+            </p>
           )}
         </div>
       );
@@ -398,9 +522,11 @@ function MyOrders() {
       order.queue_position,
       order.orders_ahead
     );
+
     const prepMinutes = order.estimated_prep_minutes;
     const readyLabel = formatReadyTime(order.estimated_ready_at);
     const remaining = order.remaining_minutes;
+
     const estimateOk =
       order.estimate_available &&
       !order.queue_error &&
@@ -411,9 +537,12 @@ function MyOrders() {
         <p className="my-order-tracking-title">
           Order Tracking
           {queueLoading && isActive ? (
-            <span className="my-order-tracking-refreshing"> · updating…</span>
+            <span className="my-order-tracking-refreshing">
+              {" "}· updating…
+            </span>
           ) : null}
         </p>
+
         <div className="my-order-tracking-grid">
           <div>
             <span>Status</span>
@@ -435,7 +564,8 @@ function MyOrders() {
           <div>
             <span>Estimated Preparation</span>
             <strong>
-              {typeof prepMinutes === "number" && !Number.isNaN(prepMinutes)
+              {typeof prepMinutes === "number" &&
+              !Number.isNaN(prepMinutes)
                 ? `${prepMinutes} minute${prepMinutes === 1 ? "" : "s"}`
                 : order.queue_error || !estimateOk
                   ? "Preparation estimate unavailable"
@@ -453,22 +583,29 @@ function MyOrders() {
             </strong>
           </div>
 
-          {typeof remaining === "number" && !Number.isNaN(remaining) && (
-            <div>
-              <span>Time Remaining</span>
-              <strong>
-                {remaining <= 0
-                  ? "Any moment now"
-                  : `Approximately ${remaining} minute${remaining === 1 ? "" : "s"}`}
-              </strong>
-            </div>
-          )}
+          {typeof remaining === "number" &&
+            !Number.isNaN(remaining) && (
+              <div>
+                <span>Time Remaining</span>
+                <strong>
+                  {remaining <= 0
+                    ? "Any moment now"
+                    : `Approximately ${remaining} minute${remaining === 1 ? "" : "s"}`}
+                </strong>
+              </div>
+            )}
         </div>
+
         {order.queue_message && (
-          <p className="my-order-tracking-message">{order.queue_message}</p>
+          <p className="my-order-tracking-message">
+            {order.queue_message}
+          </p>
         )}
+
         {order.queue_error && !order.queue_message && (
-          <p className="my-order-tracking-message">{order.queue_error}</p>
+          <p className="my-order-tracking-message">
+            {order.queue_error}
+          </p>
         )}
       </div>
     );
@@ -517,6 +654,7 @@ function MyOrders() {
           <div className="my-orders-empty-icon">🍽️</div>
           <h2>No orders yet</h2>
           <p>Your placed orders will appear here.</p>
+
           <button
             type="button"
             className="my-orders-primary"
@@ -542,7 +680,10 @@ function MyOrders() {
               <article className="my-order-card" key={orderId}>
                 <div className="my-order-top">
                   <div>
-                    <p className="my-order-number">ORDER #{orderId}</p>
+                    <p className="my-order-number">
+                      ORDER #{orderId}
+                    </p>
+
                     <h2>
                       {cartType === "snacks_desserts"
                         ? "Snacks & Desserts"

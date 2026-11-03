@@ -31,8 +31,6 @@ function rowsFrom(queryResult) {
   return [];
 }
 
-
-
 /**
  * GET /api/orders/:orderId/tracking
  * Retrieve detailed tracking information for an order
@@ -40,6 +38,7 @@ function rowsFrom(queryResult) {
 async function getOrderTracking(req, res) {
   try {
     const orderId = parseOrderId(req.params.orderId);
+
     if (!orderId) {
       return res.status(400).json({
         error: 'Bad Request',
@@ -47,10 +46,11 @@ async function getOrderTracking(req, res) {
       });
     }
 
-    // 1. Fetch order details
+    // 1. Fetch order details.
     const orderRows = rowsFrom(await db.query(
-      `SELECT order_id, user_id, order_date, status, total_amount, pickup_code,
-              special_instructions, estimated_prep_minutes, estimated_ready_at,
+      `SELECT order_id, user_id, order_date, status, cart_type,
+              total_amount, pickup_code, special_instructions,
+              estimated_prep_minutes, estimated_ready_at,
               actual_ready_at, cancelled_at, cancellation_reason
        FROM Orders
        WHERE order_id = ?`,
@@ -66,10 +66,14 @@ async function getOrderTracking(req, res) {
 
     const order = orderRows[0];
 
-    // 2. Strict authorization: Verify order ownership
-    // Middleware sets req.user.userId (not user_id)
-    const isOwner = req.user && Number(req.user.userId) === Number(order.user_id);
-    const isStaff = req.user && (req.user.role === 'staff' || req.user.role === 'admin');
+    // 2. Strict authorization: Verify order ownership.
+    const isOwner =
+      req.user &&
+      Number(req.user.userId) === Number(order.user_id);
+
+    const isStaff =
+      req.user &&
+      (req.user.role === 'staff' || req.user.role === 'admin');
 
     if (!isOwner && !isStaff) {
       return res.status(403).json({
@@ -78,7 +82,7 @@ async function getOrderTracking(req, res) {
       });
     }
 
-    // 3. Fetch order items
+    // 3. Fetch order items.
     const itemRows = rowsFrom(await db.query(
       `SELECT oi.order_item_id, oi.item_id, mi.item_name, oi.quantity,
               oi.unit_price, oi.subtotal, mi.prep_time_minutes
@@ -88,19 +92,24 @@ async function getOrderTracking(req, res) {
       [orderId]
     ));
 
-    // 4. Retrieve pickup instructions from Canteen_Settings
+    // 4. Retrieve pickup instructions from Canteen_Settings.
     let pickupInstructions = null;
+
     const settingsRows = rowsFrom(await db.query(
-      `SELECT setting_value FROM Canteen_Settings WHERE setting_key = ?`,
+      `SELECT setting_value
+       FROM Canteen_Settings
+       WHERE setting_key = ?`,
       ['pickup_instructions']
     ));
+
     if (settingsRows && settingsRows.length > 0) {
       pickupInstructions = settingsRows[0].setting_value;
     } else {
-      pickupInstructions = 'Please follow the instructions provided at the canteen counter.';
+      pickupInstructions =
+        'Please follow the instructions provided at the canteen counter.';
     }
 
-    // 5. Construct Pickup Information according to status and security policy
+    // 5. Construct pickup information according to status.
     let pickupData = {
       available: false,
       pickup_code: null,
@@ -117,13 +126,18 @@ async function getOrderTracking(req, res) {
       pickupData = {
         available: true,
         pickup_code: order.pickup_code,
-        instructions: 'This order has already been collected. Thank you for dining with SmartBite!',
+        instructions:
+          'This order has already been collected. Thank you for dining with SmartBite!',
       };
-    } else if (order.status === 'Placed' || order.status === 'Preparing') {
+    } else if (
+      order.status === 'Placed' ||
+      order.status === 'Preparing'
+    ) {
       pickupData = {
         available: false,
         pickup_code: null,
-        instructions: 'Pickup code and collection instructions will be displayed here once your food is ready.',
+        instructions:
+          'Pickup code and collection instructions will be displayed here once your food is ready.',
       };
     } else if (order.status === 'Cancelled') {
       pickupData = {
@@ -133,13 +147,14 @@ async function getOrderTracking(req, res) {
       };
     }
 
-    // Return sanitized tracking payload
+    // 6. Return sanitized tracking payload.
     return res.status(200).json({
       order: {
         order_id: order.order_id,
         user_id: order.user_id,
         order_date: order.order_date,
         status: order.status,
+        cart_type: order.cart_type,
         total_amount: parseFloat(order.total_amount),
         estimated_prep_minutes: order.estimated_prep_minutes,
         estimated_ready_at: order.estimated_ready_at,
@@ -148,7 +163,7 @@ async function getOrderTracking(req, res) {
         cancellation_reason: order.cancellation_reason,
         special_instructions: order.special_instructions,
       },
-      items: (itemRows || []).map(item => ({
+      items: (itemRows || []).map((item) => ({
         order_item_id: item.order_item_id,
         item_id: item.item_id,
         item_name: item.item_name,
@@ -159,7 +174,11 @@ async function getOrderTracking(req, res) {
       pickup: pickupData,
     });
   } catch (error) {
-    console.error('[OrderTrackingController] getOrderTracking error:', error);
+    console.error(
+      '[OrderTrackingController] getOrderTracking error:',
+      error
+    );
+
     return res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to retrieve order tracking information.',
@@ -169,11 +188,12 @@ async function getOrderTracking(req, res) {
 
 /**
  * GET /api/orders/:orderId/queue
- * Retrieve queue position and waiting time estimation
+ * Retrieve queue position and waiting time estimation.
  */
 async function getOrderQueue(req, res) {
   try {
     const orderId = parseOrderId(req.params.orderId);
+
     if (!orderId) {
       return res.status(400).json({
         error: 'Bad Request',
@@ -182,8 +202,9 @@ async function getOrderQueue(req, res) {
     }
 
     const orderRows = rowsFrom(await db.query(
-      `SELECT order_id, user_id, order_date, status, estimated_prep_minutes,
-              estimated_ready_at, actual_ready_at, cancelled_at
+      `SELECT order_id, user_id, order_date, status, cart_type,
+              estimated_prep_minutes, estimated_ready_at,
+              actual_ready_at, cancelled_at
        FROM Orders
        WHERE order_id = ?`,
       [orderId]
@@ -198,24 +219,33 @@ async function getOrderQueue(req, res) {
 
     const order = orderRows[0];
 
-    // Authorization check
-    // Middleware sets req.user.userId (not user_id)
-    const isOwner = req.user && Number(req.user.userId) === Number(order.user_id);
-    const isStaff = req.user && (req.user.role === 'staff' || req.user.role === 'admin');
+    // Authorization check.
+    const isOwner =
+      req.user &&
+      Number(req.user.userId) === Number(order.user_id);
+
+    const isStaff =
+      req.user &&
+      (req.user.role === 'staff' || req.user.role === 'admin');
 
     if (!isOwner && !isStaff) {
       return res.status(403).json({
         error: 'Forbidden',
-        message: 'You do not have permission to view queue details for this order.',
+        message:
+          'You do not have permission to view queue details for this order.',
       });
     }
 
-    // Calculate queue estimates
+    // Calculate queue estimates.
     const queueData = await queueService.calculateQueueEstimate(order);
 
     return res.status(200).json(queueData);
   } catch (error) {
-    console.error('[OrderTrackingController] getOrderQueue error:', error);
+    console.error(
+      '[OrderTrackingController] getOrderQueue error:',
+      error
+    );
+
     return res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to calculate queue status.',
@@ -225,35 +255,40 @@ async function getOrderQueue(req, res) {
 
 /**
  * GET /api/orders/my/active
- * Retrieve currently active orders for the authenticated student
+ * Retrieve currently active orders for the authenticated student.
  */
 async function getMyActiveOrders(req, res) {
   try {
-    // Middleware sets req.user.userId (not user_id)
     const userId = req.user.userId;
 
     const orders = rowsFrom(await db.query(
-      `SELECT order_id, user_id, order_date, status, total_amount,
-              estimated_prep_minutes, estimated_ready_at
+      `SELECT order_id, user_id, order_date, status, cart_type,
+              total_amount, estimated_prep_minutes, estimated_ready_at
        FROM Orders
-       WHERE user_id = ? AND status IN ('Pending', 'Placed', 'Preparing', 'Ready')
+       WHERE user_id = ?
+         AND status IN ('Pending', 'Placed', 'Preparing', 'Ready')
        ORDER BY order_date DESC`,
       [userId]
     ));
 
     return res.status(200).json({
       count: orders.length,
-      orders: orders.map(o => ({
+      orders: orders.map((o) => ({
         order_id: o.order_id,
         order_date: o.order_date,
         status: o.status,
+        cart_type: o.cart_type,
         total_amount: parseFloat(o.total_amount),
         estimated_prep_minutes: o.estimated_prep_minutes,
         estimated_ready_at: o.estimated_ready_at,
       })),
     });
   } catch (error) {
-    console.error('[OrderTrackingController] getMyActiveOrders error:', error);
+    console.error(
+      '[OrderTrackingController] getMyActiveOrders error:',
+      error
+    );
+
     return res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to retrieve active orders.',
@@ -263,32 +298,53 @@ async function getMyActiveOrders(req, res) {
 
 /**
  * GET /api/auth/demo-users
- * Helper endpoint for viva demonstration and testing different student accounts
+ * Helper endpoint for viva demonstration and testing different student accounts.
  */
 async function getDemoUsers(req, res) {
   try {
-    // [DEVELOPMENT-ONLY FIXTURE]
-    // Strictly prevent demo account leakage in production environments
+    // Development-only fixture.
     if (process.env.NODE_ENV === 'production') {
       return res.status(403).json({
         error: 'Forbidden',
-        message: 'Demo accounts endpoint is disabled in production environments.',
+        message:
+          'Demo accounts endpoint is disabled in production environments.',
       });
     }
 
     const demoAccounts = [
-      { user_id: 1, name: 'Aarav Sharma (Student - Active Orders 101, 102, 103, 104, 105)', email: 'aarav.sharma@college.edu', role: 'student' },
-      { user_id: 2, name: 'Ishika Jain (Student - Active Order 201)', email: 'ishika.jain@college.edu', role: 'student' },
-      { user_id: 3, name: 'Rohan Mehta (Student - No active orders)', email: 'rohan.mehta@college.edu', role: 'student' },
-      { user_id: 4, name: 'Canteen Counter Staff (Staff - Counter Access)', email: 'staff@canteen.college.edu', role: 'staff' },
+      {
+        user_id: 1,
+        name: 'Aarav Sharma (Student - Active Orders 101, 102, 103, 104, 105)',
+        email: 'aarav.sharma@college.edu',
+        role: 'student',
+      },
+      {
+        user_id: 2,
+        name: 'Ishika Jain (Student - Active Order 201)',
+        email: 'ishika.jain@college.edu',
+        role: 'student',
+      },
+      {
+        user_id: 3,
+        name: 'Rohan Mehta (Student - No active orders)',
+        email: 'rohan.mehta@college.edu',
+        role: 'student',
+      },
+      {
+        user_id: 4,
+        name: 'Canteen Counter Staff (Staff - Counter Access)',
+        email: 'staff@canteen.college.edu',
+        role: 'staff',
+      },
     ];
 
-    // Sign demo tokens the same way as /api/auth (do not import from middleware)
+    // Sign demo tokens the same way as /api/auth.
     if (!process.env.JWT_SECRET) {
       return res.status(500).json({
         error: 'JWT_SECRET is not configured',
       });
     }
+
     const usersWithTokens = demoAccounts.map((u) => ({
       ...u,
       token: jwt.sign(
@@ -298,9 +354,13 @@ async function getDemoUsers(req, res) {
       ),
     }));
 
-    return res.status(200).json({ users: usersWithTokens });
+    return res.status(200).json({
+      users: usersWithTokens,
+    });
   } catch (error) {
-    return res.status(500).json({ error: 'Failed to get demo accounts' });
+    return res.status(500).json({
+      error: 'Failed to get demo accounts',
+    });
   }
 }
 

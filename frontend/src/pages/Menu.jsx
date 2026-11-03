@@ -111,6 +111,7 @@ const menuItems = [
     { id: 79, name: 'Chai', price: 12, emoji: '☕' },
     { id: 80, name: 'Masala / Aadrak Chai', price: 15, emoji: '☕' },
     { id: 81, name: 'Cold Coffee', price: 50, emoji: '🧋' },
+
     // Desserts
     { id: 82, name: 'Chocolate Brownie', price: 60, emoji: '🍫' },
     { id: 83, name: 'Chocolate Pastry', price: 50, emoji: '🍰' },
@@ -135,8 +136,11 @@ const menuItems = [
                 ? 'Drinks'
                 : 'Meals'
 
+    // Snacks and desserts are already prepared and ready to serve.
     const preparationType =
-        category === 'Snacks' ? 'readyToServe' : 'prepared'
+        category === 'Snacks' || category === 'Desserts'
+            ? 'readyToServe'
+            : 'prepared'
 
     return {
         ...item,

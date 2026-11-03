@@ -450,7 +450,8 @@ router.post("/", async (req, res) => {
 
       const quantity = lines.get(itemId);
       const subtotalCents = unitCents * quantity;
-totalCents += subtotalCents;
+
+      totalCents += subtotalCents;
 
       return {
         item_id: itemId,
@@ -505,16 +506,17 @@ totalCents += subtotalCents;
 
     await connection.commit();
 
-    // Order + items are committed. Calculate initial queue estimate (best-effort).
-    // Status stays Pending — queueService treats Pending as an active queue status.
-    // Failure here must NOT undo the order.
+    // Calculate the initial estimate after committing the order.
+    // Snacks & Desserts are identified by cart_type and bypass preparation.
     let queueEstimate = null;
+
     try {
       queueEstimate = await queueService.calculateInitialOrderEstimate({
         order_id: orderId,
         status: ORDER_STATUS_PENDING,
         order_date: new Date(),
         user_id: userId,
+        cart_type: cartType,
       });
     } catch (estimateError) {
       console.warn(
@@ -601,7 +603,7 @@ router.patch("/:id/cancel", async (req, res) => {
 
     const order = orders[0];
 
-    // Ownership check
+    // Ownership check.
     if (Number(order.user_id) !== Number(req.user.userId)) {
       throw new OrderRequestError(
         403,
