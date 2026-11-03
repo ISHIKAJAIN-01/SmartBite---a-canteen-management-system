@@ -111,15 +111,29 @@ const menuItems = [
     { id: 79, name: 'Chai', price: 12, emoji: '☕' },
     { id: 80, name: 'Masala / Aadrak Chai', price: 15, emoji: '☕' },
     { id: 81, name: 'Cold Coffee', price: 50, emoji: '🧋' },
+    // Desserts
+    { id: 82, name: 'Chocolate Brownie', price: 60, emoji: '🍫' },
+    { id: 83, name: 'Chocolate Pastry', price: 50, emoji: '🍰' },
+    { id: 84, name: 'Black Forest Pastry', price: 60, emoji: '🍰' },
+    { id: 85, name: 'Red Velvet Pastry', price: 70, emoji: '🍰' },
+    { id: 86, name: 'Pineapple Pastry', price: 50, emoji: '🍰' },
+    { id: 87, name: 'Butterscotch Pastry', price: 60, emoji: '🍰' },
+    { id: 88, name: 'Chocolate Donut', price: 50, emoji: '🍩' },
+    { id: 89, name: 'Glazed Donut', price: 40, emoji: '🍩' },
+    { id: 90, name: 'Strawberry Donut', price: 50, emoji: '🍩' },
+    { id: 91, name: 'Oreo Donut', price: 60, emoji: '🍩' },
 ].map((item) => {
     const isBottledDrink = item.id >= 64 && item.id <= 78
     const isMadeToOrderDrink = item.id >= 79 && item.id <= 81
+    const isDessert = item.id >= 82 && item.id <= 91
 
-    const category = isBottledDrink
-        ? 'Snacks'
-        : isMadeToOrderDrink
-            ? 'Drinks'
-            : 'Meals'
+    const category = isDessert
+        ? 'Desserts'
+        : isBottledDrink
+            ? 'Snacks'
+            : isMadeToOrderDrink
+                ? 'Drinks'
+                : 'Meals'
 
     const preparationType =
         category === 'Snacks' ? 'readyToServe' : 'prepared'
@@ -494,11 +508,10 @@ function Menu() {
                             key={category}
                             type="button"
                             onClick={() => setActiveCategory(category)}
-                            className={`rounded-full px-5 py-2.5 text-sm font-medium transition ${
-                                activeCategory === category
-                                    ? 'bg-[#382117] text-white'
-                                    : 'border border-[#E5D9C9] bg-white text-[#706052] hover:bg-[#F2E6D1]'
-                            }`}
+                            className={`rounded-full px-5 py-2.5 text-sm font-medium transition ${activeCategory === category
+                                ? 'bg-[#382117] text-white'
+                                : 'border border-[#E5D9C9] bg-white text-[#706052] hover:bg-[#F2E6D1]'
+                                }`}
                         >
                             {category === 'My Favourites' && '♥ '}
                             {category}
